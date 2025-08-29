@@ -1,132 +1,72 @@
-cd backend
-npm init -y
-npm install express bcrypt jsonwebtoken pg cors dotenv
-const { Pool } = require("pg");
-require("dotenv").config();
-
-const pool = new Pool({
-  connectionString: process.env.DB_URL,
-});
-
-module.exports = pool;
+// index.js
 const express = require("express");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcrypt");
-const db = require("../db");
-const router = express.Router();
-
-// 로그인
-router.post("/login", async (req, res) => {
-  const { studentId, password } = req.body;
-  const result = await db.query("SELECT * FROM students WHERE student_id=$1", [studentId]);
-  if (!result.rows.length) return res.status(401).json({ error: "학생 없음" });
-
-  const student = result.rows[0];
-  const valid = await bcrypt.compare(password, student.password_hash);
-  if (!valid) return res.status(401).json({ error: "비밀번호 불일치" });
-
-  const token = jwt.sign({ studentId }, process.env.JWT_SECRET, { expiresIn: "2h" });
-  res.json({ token, mustChangePassword: student.must_change_password });
-});
-
-// 비밀번호 변경
-router.post("/change-password", async (req, res) => {
-  const { studentId, oldPassword, newPassword } = req.body;
-  const result = await db.query("SELECT * FROM students WHERE student_id=$1", [studentId]);
-  if (!result.rows.length) return res.status(401).json({ error: "학생 없음" });
-
-  const student = result.rows[0];
-  const valid = await bcrypt.compare(oldPassword, student.password_hash);
-  if (!valid) return res.status(401).json({ error: "기존 비밀번호 불일치" });
-
-  const newHash = await bcrypt.hash(newPassword, 10);
-  await db.query(
-    "UPDATE students SET password_hash=$1, must_change_password=false WHERE student_id=$2",
-    [newHash, studentId]
-  );
-
-  res.json({ message: "비밀번호 변경 성공 ✅" });
-});
-
-module.exports = router;
-const express = require("express");
-const cors = require("cors");
-require("dotenv").config();
-
 const app = express();
-app.use(cors());
-app.use(express.json());
+const port = 3000;
 
-// 라우트 등록
-const authRoutes = require("./routes/auth");
-app.use("/api/auth", authRoutes);
+// 예제 데이터
+const timetable = [
+  { day: "월요일", subjects: ["수학", "영어", "체육"] },
+  { day: "화요일", subjects: ["과학", "음악", "역사"] },
+  { day: "수요일", subjects: ["국어", "미술", "정보"] },
+];
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`✅ Backend running on port ${PORT}`));
-JWT_SECRET=supersecret
-DB_URL=postgresql://postgres:비번@localhost:5432/schooldb
-CREATE DATABASE schooldb;
+const events = [
+  { title: "체육대회", date: "2025-09-05" },
+  { title: "과학 전시회", date: "2025-09-10" },
+];
 
-\c schooldb;
+const shuttleBuses = [
+  { route: "A코스", status: "운행중", nextTime: "08:30" },
+  { route: "B코스", status: "지연", nextTime: "08:45" },
+];
 
-CREATE TABLE students (
-  id SERIAL PRIMARY KEY,
-  student_id VARCHAR(20) UNIQUE NOT NULL,
-  name VARCHAR(50) NOT NULL,
-  password_hash TEXT NOT NULL,
-  must_change_password BOOLEAN DEFAULT true,
-  created_at TIMESTAMP DEFAULT NOW()
-);
+// 루트 페이지
+app.get("/", (req, res) => {
+  let html = `
+  <!DOCTYPE html>
+  <html lang="ko">
+  <head>
+    <meta charset="UTF-8">
+    <title>학교 포털</title>
+    <style>
+      body { font-family: Arial, sans-serif; background: #f9f9f9; color: #333; margin: 0; padding: 20px; }
+      h1 { color: #2c3e50; }
+      h2 { color: #34495e; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+      ul { list-style-type: none; padding-left: 0; }
+      li { background: #fff; margin: 5px 0; padding: 10px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+      .section { margin-bottom: 30px; }
+    </style>
+  </head>
+  <body>
+    <h1>학교 포털</h1>
 
--- 테스트 계정
-INSERT INTO students (student_id, name, password_hash)
-VALUES ('20250001', '홍길동', crypt('1234', gen_salt('bf')));
-cd ../frontend
-npx create-next-app@latest .
-npm install axios
-import { useState } from "react";
-import axios from "axios";
-import { useRouter } from "next/router";
-
-export default function Login() {
-  const [studentId, setStudentId] = useState("");
-  const [password, setPassword] = useState("");
-  const router = useRouter();
-
-  const handleLogin = async () => {
-    try {
-      const res = await axios.post("http://localhost:4000/api/auth/login", { studentId, password });
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("studentId", studentId);
-
-      if (res.data.mustChangePassword) router.push("/change-password");
-      else router.push("/dashboard");
-    } catch {
-      alert("로그인 실패 ❌");
-    }
-  };
-
-  return (
-    <div className="flex flex-col items-center mt-20">
-      <h1 className="text-xl mb-4">학생 로그인</h1>
-      <input className="border p-2 mb-2" placeholder="학번"
-        value={studentId} onChange={(e) => setStudentId(e.target.value)} />
-      <input type="password" className="border p-2 mb-2" placeholder="비밀번호"
-        value={password} onChange={(e) => setPassword(e.target.value)} />
-      <button className="bg-blue-500 text-white px-4 py-2" onClick={handleLogin}>로그인</button>
+    <div class="section">
+      <h2>시간표</h2>
+      <ul>
+        ${timetable.map(t => `<li><strong>${t.day}:</strong> ${t.subjects.join(", ")}</li>`).join("")}
+      </ul>
     </div>
-  );
-}
-import { useRouter } from "next/router";
 
-export default function NoticeDetail() {
-  const router = useRouter();
-  const { id } = router.query;
-
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold">공지 상세 #{id}</h1>
-      <p>이곳에 DB에서 불러온 공지 내용을 표시합니다.</p>
+    <div class="section">
+      <h2>행사 공지</h2>
+      <ul>
+        ${events.map(e => `<li><strong>${e.date}:</strong> ${e.title}</li>`).join("")}
+      </ul>
     </div>
-  );
-}
+
+    <div class="section">
+      <h2>셔틀버스 정보</h2>
+      <ul>
+        ${shuttleBuses.map(b => `<li><strong>${b.route}</strong> - ${b.status} (다음: ${b.nextTime})</li>`).join("")}
+      </ul>
+    </div>
+  </body>
+  </html>
+  `;
+  res.send(html);
+});
+
+// 서버 시작
+app.listen(port, () => {
+  console.log(`학교 포털 실행 중: http://localhost:${port}`);
+});
