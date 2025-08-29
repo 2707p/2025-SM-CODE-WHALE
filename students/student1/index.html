@@ -1,13 +1,934 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>student1 연습 페이지</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <h1>student1의 연습 페이지입니다!</h1>
-  <p>이 파일을 자유롭게 수정해보세요.</p>
-</body>
-</html>
+school-portal/
+ ├─ docker-compose.yml
+ ├─ backend/
+ │   ├─ package.json
+ │   ├─ .env.example
+ │   ├─ src/
+ │   │   ├─ server.js
+ │   │   ├─ db.js
+ │   │   ├─ middleware/
+ │   │   │   └─ auth.js
+ │   │   └─ routes/
+ │   │       ├─ auth.js
+ │   │       ├─ notices.js
+ │   │       ├─ timetable.js
+ │   │       ├─ events.js
+ │   │       └─ shuttle.js
+ │   └─ scripts/
+ │       ├─ schema.sql
+ │       └─ seed.js
+ └─ frontend/
+     ├─ package.json
+     ├─ next.config.js
+     ├─ .env.local.example
+     ├─ styles/globals.css
+     ├─ lib/
+     │  ├─ api.js
+     │  └─ auth.js
+     ├─ components/
+     │  ├─ Layout.js
+     │  ├─ NoticeBar.js
+     │  └─ WidgetCard.js
+     └─ pages/
+        ├─ _app.js
+        ├─ login.js
+        ├─ dashboard.js
+        ├─ notice/
+        │  ├─ index.js
+        │  └─ [id].js
+        ├─ timetable.js
+        ├─ events/
+        │  └─ index.js
+        └─ shuttle.js
+
+version: "3.9"
+services:
+  db:
+    image: postgres:15
+    container_name: school_portal_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: portal
+      POSTGRES_PASSWORD: portalpw
+      POSTGRES_DB: portaldb
+    ports:
+      - "5432:5432"
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+volumes:
+  dbdata:
+
+{
+  "name": "school-portal-backend",
+  "version": "1.0.0",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node src/server.js",
+    "seed": "node scripts/seed.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.12.0"
+  }
+}
+
+PORT=4000
+DATABASE_URL=postgres://portal:portalpw@localhost:5432/portaldb
+JWT_SECRET=replace_with_long_random_string
+
+import pkg from 'pg';
+import dotenv from 'dotenv';
+dotenv.config();
+
+const { Pool } = pkg;
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
+});
+
+export async function query(sql, params = []) {
+  const client = await pool.connect();
+  try {
+    const res = await client.query(sql, params);
+    return res;
+  } finally {
+    client.release();
+  }
+}
+
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+dotenv.config();
+
+export function requireAuth(req, res, next) {
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  if (!token) return res.status(401).json({ error: '토큰 없음' });
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // { studentId, name, iat, exp }
+    next();
+  } catch (e) {
+    return res.status(401).json({ error: '토큰 유효하지 않음' });
+  }
+}
+
+import express from 'express';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
+import { query } from '../db.js';
+import dotenv from 'dotenv';
+dotenv.config();
+
+const router = express.Router();
+
+// 로그인
+router.post('/login', async (req, res) => {
+  try {
+    const { studentId, password } = req.body;
+    const r = await query('SELECT * FROM students WHERE student_id=$1', [studentId]);
+    if (!r.rows.length) return res.status(401).json({ error: '학생 없음' });
+
+    const s = r.rows[0];
+    const ok = await bcrypt.compare(password, s.password_hash);
+    if (!ok) return res.status(401).json({ error: '비밀번호 불일치' });
+
+    const token = jwt.sign({ studentId: s.student_id, name: s.name }, process.env.JWT_SECRET, { expiresIn: '2h' });
+    res.json({ token, mustChangePassword: s.must_change_password, studentId: s.student_id, name: s.name });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+// 비밀번호 변경
+router.post('/change-password', async (req, res) => {
+  try {
+    const { studentId, oldPassword, newPassword } = req.body;
+    const r = await query('SELECT * FROM students WHERE student_id=$1', [studentId]);
+    if (!r.rows.length) return res.status(400).json({ error: '학생 없음' });
+
+    const s = r.rows[0];
+    const ok = await bcrypt.compare(oldPassword, s.password_hash);
+    if (!ok) return res.status(401).json({ error: '기존 비밀번호 불일치' });
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await query('UPDATE students SET password_hash=$1, must_change_password=false WHERE student_id=$2', [newHash, studentId]);
+    res.json({ message: '비밀번호 변경 성공' });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+export default router;
+
+import express from 'express';
+import { query } from '../db.js';
+import { requireAuth } from '../middleware/auth.js';
+
+const router = express.Router();
+
+// 공지 목록 (최신순)
+router.get('/', requireAuth, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit || '20', 10), 100);
+    const r = await query('SELECT id, title, content, created_at FROM notices ORDER BY created_at DESC LIMIT $1', [limit]);
+    res.json(r.rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+// 공지 상세
+router.get('/:id', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT id, title, content, created_at FROM notices WHERE id=$1', [req.params.id]);
+    if (!r.rows.length) return res.status(404).json({ error: '공지 없음' });
+    res.json(r.rows[0]);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+export default router;
+
+import express from 'express';
+import { query } from '../db.js';
+import { requireAuth } from '../middleware/auth.js';
+
+const router = express.Router();
+
+// 내 시간표 (토큰의 studentId 기준)
+router.get('/', requireAuth, async (req, res) => {
+  try {
+    const sid = req.user.studentId;
+    const r = await query(
+      `SELECT day, subject, room, 
+              to_char(start_time, 'HH24:MI') as start_time, 
+              to_char(end_time, 'HH24:MI') as end_time
+       FROM timetable WHERE student_id=$1
+       ORDER BY 
+         CASE day 
+           WHEN 'Mon' THEN 1 WHEN 'Tue' THEN 2 WHEN 'Wed' THEN 3 
+           WHEN 'Thu' THEN 4 WHEN 'Fri' THEN 5 ELSE 6 END, start_time`,
+      [sid]
+    );
+    res.json(r.rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+export default router;
+
+import express from 'express';
+import { query } from '../db.js';
+import { requireAuth } from '../middleware/auth.js';
+
+const router = express.Router();
+
+// 학사일정/행사 목록 (type 필터 가능: 학사일정, 행사)
+router.get('/', requireAuth, async (req, res) => {
+  try {
+    const { type } = req.query;
+    const params = [];
+    let sql = 'SELECT id, title, description, event_date, type FROM events';
+    if (type) {
+      sql += ' WHERE type=$1';
+      params.push(type);
+    }
+    sql += ' ORDER BY event_date ASC';
+    const r = await query(sql, params);
+    res.json(r.rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+export default router;
+
+import express from 'express';
+import { query } from '../db.js';
+import { requireAuth } from '../middleware/auth.js';
+
+const router = express.Router();
+
+// 셔틀 현황 전체(간단)
+router.get('/', requireAuth, async (req, res) => {
+  try {
+    const r = await query(
+      `SELECT id, bus_id, status, lat, lng, next_stop, 
+              to_char(updated_at, 'YYYY-MM-DD HH24:MI:SS') as updated_at 
+       FROM shuttles ORDER BY bus_id`
+    );
+    res.json(r.rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+export default router;
+
+
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import authRoutes from './routes/auth.js';
+import noticeRoutes from './routes/notices.js';
+import timetableRoutes from './routes/timetable.js';
+import eventRoutes from './routes/events.js';
+import shuttleRoutes from './routes/shuttle.js';
+
+dotenv.config();
+const app = express();
+
+app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+app.use(express.json());
+
+app.get('/health', (_, res) => res.json({ ok: true }));
+
+app.use('/auth', authRoutes);
+app.use('/notices', noticeRoutes);
+app.use('/timetable', timetableRoutes);
+app.use('/events', eventRoutes);
+app.use('/shuttle', shuttleRoutes);
+
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
+
+-- students
+CREATE TABLE IF NOT EXISTS students (
+  id SERIAL PRIMARY KEY,
+  student_id VARCHAR(20) UNIQUE NOT NULL,
+  name VARCHAR(50) NOT NULL,
+  password_hash TEXT NOT NULL,
+  must_change_password BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- timetable
+CREATE TABLE IF NOT EXISTS timetable (
+  id SERIAL PRIMARY KEY,
+  student_id VARCHAR(20) REFERENCES students(student_id),
+  subject VARCHAR(100) NOT NULL,
+  day VARCHAR(10) NOT NULL,
+  start_time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  room VARCHAR(50) NOT NULL
+);
+
+-- notices
+CREATE TABLE IF NOT EXISTS notices (
+  id SERIAL PRIMARY KEY,
+  title VARCHAR(200) NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- events
+CREATE TABLE IF NOT EXISTS events (
+  id SERIAL PRIMARY KEY,
+  title VARCHAR(200) NOT NULL,
+  description TEXT,
+  event_date DATE NOT NULL,
+  type VARCHAR(20) NOT NULL
+);
+
+-- shuttles
+CREATE TABLE IF NOT EXISTS shuttles (
+  id SERIAL PRIMARY KEY,
+  bus_id VARCHAR(10) NOT NULL,
+  status VARCHAR(20) NOT NULL,
+  lat DECIMAL(10,7),
+  lng DECIMAL(10,7),
+  next_stop VARCHAR(50),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+import dotenv from 'dotenv';
+dotenv.config();
+import bcrypt from 'bcrypt';
+import { query } from '../src/db.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+async function main() {
+  // 스키마 생성
+  const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
+  await query(schema);
+
+  // 학생 1명 + 초기 비밀번호
+  const studentId = '20230001';
+  const name = '홍길동';
+  const initialPw = 'Passw0rd!';
+  const hash = await bcrypt.hash(initialPw, 10);
+
+  await query(
+    `INSERT INTO students (student_id, name, password_hash, must_change_password)
+     VALUES ($1,$2,$3,true)
+     ON CONFLICT (student_id) DO UPDATE SET name=EXCLUDED.name`,
+    [studentId, name, hash]
+  );
+
+  // 시간표 (샘플)
+  await query(`DELETE FROM timetable WHERE student_id=$1`, [studentId]);
+  await query(
+    `INSERT INTO timetable (student_id, subject, day, start_time, end_time, room) VALUES
+     ($1,'자료구조','Mon','09:00','10:30','IT301'),
+     ($1,'운영체제','Mon','13:00','14:30','IT202'),
+     ($1,'알고리즘','Wed','10:45','12:15','IT405'),
+     ($1,'데이터베이스','Fri','11:00','12:30','IT110')`,
+    [studentId]
+  );
+
+  // 공지
+  await query(`DELETE FROM notices;`);
+  await query(
+    `INSERT INTO notices (title, content) VALUES
+     ('[필독] 2학기 수강신청 일정', '수강신청은 9/1 09:00부터입니다.'),
+     ('셔틀버스 노선 변경 안내', '정문-기숙사 순환 노선이 변경되었습니다.'),
+     ('도서관 개관시간 변경', '시험기간 연장 운영합니다.')`
+  );
+
+  // 학사일정/행사
+  await query(`DELETE FROM events;`);
+  await query(
+    `INSERT INTO events (title, description, event_date, type) VALUES
+     ('개강일', '2학기 개강', '2025-09-01', '학사일정'),
+     ('수강정정', '포털에서 정정 가능', '2025-09-03', '학사일정'),
+     ('수강정정 마감', '마감일', '2025-09-05', '학사일정'),
+     ('동아리 박람회', '체육관', '2025-09-07', '행사')`
+  );
+
+  // 셔틀
+  await query(`DELETE FROM shuttles;`);
+  await query(
+    `INSERT INTO shuttles (bus_id, status, lat, lng, next_stop) VALUES
+     ('A01','운행중',37.5665,126.9780,'정문'),
+     ('B02','대기중',37.5650,126.9760,'기숙사')`
+  );
+
+  console.log('Seed 완료 ✅');
+  console.log('로그인: 학번 20230001 / 비밀번호 Passw0rd! (첫 로그인 후 비번 변경 권장)');
+}
+
+main().then(()=>process.exit(0)).catch(e=>{ console.error(e); process.exit(1); });
+
+
+{
+  "name": "school-portal-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "next": "14.2.4",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  }
+}
+
+NEXT_PUBLIC_API_BASE=http://localhost:4000
+
+/** @type {import('next').NextConfig} */
+const nextConfig = { reactStrictMode: true };
+export default nextConfig;
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen; background: #f6f7fb; color: #111; }
+a { color: #2563eb; text-decoration: none; }
+.container { max-width: 1080px; margin: 0 auto; padding: 24px; }
+.card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:16px; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
+.grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:16px; }
+.btn { padding:10px 14px; border-radius:8px; background:#2563eb; color:#fff; border:none; cursor:pointer; }
+.btn.secondary { background:#6b7280; }
+.input { width:100%; padding:10px 12px; border:1px solid #d1d5db; border-radius:8px; margin-bottom:10px; }
+.header { position:sticky; top:0; z-index:10; background:#111827; color:#fff; padding:12px 0; margin-bottom:16px; }
+.header .inner { display:flex; align-items:center; justify-content:space-between; }
+.header .brand { font-weight:700; }
+.noticeBar { background:#fff7ed; border:1px solid #fed7aa; padding:16px; border-radius:12px; margin-bottom:16px; }
+.badge { font-size:12px; color:#6b7280; }
+.row { display:flex; gap:10px; align-items:center; }
+
+
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000'
+});
+
+// 요청마다 토큰 자동 첨부
+api.interceptors.request.use(cfg => {
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('token');
+    if (token) cfg.headers.Authorization = `Bearer ${token}`;
+  }
+  return cfg;
+});
+
+export default api;
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
+
+export function useRequireAuth() {
+  const router = useRouter();
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) router.replace('/login');
+  }, [router]);
+}
+
+export function logout(router) {
+  localStorage.removeItem('token');
+  localStorage.removeItem('studentId');
+  localStorage.removeItem('name');
+  router.replace('/login');
+}
+
+
+import { logout } from '../lib/auth';
+import { useRouter } from 'next/router';
+
+export default function Layout({ children }) {
+  const router = useRouter();
+  const name = typeof window !== 'undefined' ? localStorage.getItem('name') : '';
+  return (
+    <>
+      <div className="header">
+        <div className="container inner">
+          <div className="brand">🎓 School Portal</div>
+          <div className="row">
+            <span className="badge">{name ? `${name}님` : ''}</span>
+            <button className="btn secondary" onClick={()=>logout(router)}>로그아웃</button>
+          </div>
+        </div>
+      </div>
+      <div className="container">{children}</div>
+    </>
+  );
+}
+
+import Link from 'next/link';
+
+export default function NoticeBar({ notices = [] }) {
+  return (
+    <div className="noticeBar">
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8}}>
+        <h2 style={{margin:0}}>📢 공지사항</h2>
+        <Link href="/notice">더보기 →</Link>
+      </div>
+      <ul style={{margin:0, paddingLeft:18}}>
+        {notices.slice(0,3).map(n => (
+          <li key={n.id}>
+            <Link href={`/notice/${n.id}`}>{n.title}</Link>
+            <span className="badge" style={{marginLeft:8}}>{n.created_at ? new Date(n.created_at).toLocaleDateString() : ''}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export default function WidgetCard({ title, children, onClick }) {
+  return (
+    <div className="card" style={{cursor:'pointer'}} onClick={onClick} role="button" tabIndex={0}>
+      <h3 style={{marginTop:0}}>{title}</h3>
+      <div>{children}</div>
+    </div>
+  );
+}
+
+
+import '../styles/globals.css';
+
+export default function App({ Component, pageProps }) {
+  return <Component {...pageProps} />;
+}
+
+
+    import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import api from '../lib/api';
+
+export default function Login() {
+  const [studentId, setStudentId] = useState('');
+  const [password, setPassword] = useState('');
+  const router = useRouter();
+
+  useEffect(()=> {
+    const token = localStorage.getItem('token');
+    if (token) router.replace('/dashboard');
+  }, [router]);
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    try {
+      const { data } = await api.post('/auth/login', { studentId, password });
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('studentId', data.studentId);
+      localStorage.setItem('name', data.name || '');
+      if (data.mustChangePassword) {
+        router.push(`/dashboard?changePw=1`);
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (err) {
+      alert('로그인 실패 ❌');
+    }
+  }
+
+  return (
+    <div className="container" style={{maxWidth:420}}>
+      <h1>학생 로그인</h1>
+      <form onSubmit={handleLogin}>
+        <input className="input" placeholder="학번" value={studentId} onChange={e=>setStudentId(e.target.value)} />
+        <input className="input" type="password" placeholder="비밀번호" value={password} onChange={e=>setPassword(e.target.value)} />
+        <button className="btn" type="submit">로그인</button>
+      </form>
+      <div style={{marginTop:16, fontSize:13, color:'#6b7280'}}>
+        샘플 계정: 학번 <b>20230001</b> / 비밀번호 <b>Passw0rd!</b>
+      </div>
+    </div>
+  );
+}
+
+
+    import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import api from '../lib/api';
+
+export default function Login() {
+  const [studentId, setStudentId] = useState('');
+  const [password, setPassword] = useState('');
+  const router = useRouter();
+
+  useEffect(()=> {
+    const token = localStorage.getItem('token');
+    if (token) router.replace('/dashboard');
+  }, [router]);
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    try {
+      const { data } = await api.post('/auth/login', { studentId, password });
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('studentId', data.studentId);
+      localStorage.setItem('name', data.name || '');
+      if (data.mustChangePassword) {
+        router.push(`/dashboard?changePw=1`);
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (err) {
+      alert('로그인 실패 ❌');
+    }
+  }
+
+  return (
+    <div className="container" style={{maxWidth:420}}>
+      <h1>학생 로그인</h1>
+      <form onSubmit={handleLogin}>
+        <input className="input" placeholder="학번" value={studentId} onChange={e=>setStudentId(e.target.value)} />
+        <input className="input" type="password" placeholder="비밀번호" value={password} onChange={e=>setPassword(e.target.value)} />
+        <button className="btn" type="submit">로그인</button>
+      </form>
+      <div style={{marginTop:16, fontSize:13, color:'#6b7280'}}>
+        샘플 계정: 학번 <b>20230001</b> / 비밀번호 <b>Passw0rd!</b>
+      </div>
+    </div>
+  );
+}
+
+
+    import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
+import Layout from '../components/Layout';
+import NoticeBar from '../components/NoticeBar';
+import WidgetCard from '../components/WidgetCard';
+import api from '../lib/api';
+import { useRequireAuth } from '../lib/auth';
+
+export default function Dashboard() {
+  useRequireAuth();
+  const router = useRouter();
+  const [notices, setNotices] = useState([]);
+  const [timetable, setTimetable] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [shuttle, setShuttle] = useState([]);
+  const [pwForm, setPwForm] = useState({ old:'', nw:'' });
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [n, t, e, s] = await Promise.all([
+          api.get('/notices?limit=3'),
+          api.get('/timetable'),
+          api.get('/events'),
+          api.get('/shuttle')
+        ]);
+        setNotices(n.data);
+        setTimetable(t.data);
+        setEvents(e.data);
+        setShuttle(s.data);
+      } catch (e) { /* noop */ }
+    }
+    load();
+  }, []);
+
+  async function changePw() {
+    try {
+      const studentId = localStorage.getItem('studentId');
+      await api.post('/auth/change-password', { studentId, oldPassword: pwForm.old, newPassword: pwForm.nw });
+      alert('비밀번호 변경 완료 ✅');
+      router.replace('/dashboard');
+    } catch {
+      alert('비밀번호 변경 실패 ❌');
+    }
+  }
+
+  const needChange = router.query.changePw === '1';
+  const today = new Date();
+  const todayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][today.getDay()];
+  const todayLectures = timetable.filter(t => t.day === todayName);
+
+  const upcoming = events
+    .filter(e => new Date(e.event_date) >= new Date(today.toDateString()))
+    .slice(0,3);
+
+  return (
+    <Layout>
+      <NoticeBar notices={notices} />
+
+      {needChange && (
+        <div className="card" style={{marginBottom:16, borderColor:'#f43f5e'}}>
+          <b>🔐 최초 로그인: 비밀번호를 변경해주세요</b>
+          <div className="row" style={{marginTop:10}}>
+            <input className="input" type="password" placeholder="기존 비밀번호" value={pwForm.old} onChange={e=>setPwForm({...pwForm, old:e.target.value})}/>
+            <input className="input" type="password" placeholder="새 비밀번호" value={pwForm.nw} onChange={e=>setPwForm({...pwForm, nw:e.target.value})}/>
+            <button className="btn" onClick={changePw}>변경</button>
+          </div>
+        </div>
+      )}
+
+      <div className="grid">
+        <WidgetCard title="📅 오늘의 시간표" onClick={()=>router.push('/timetable')}>
+          {todayLectures.length === 0 && <div>오늘 수업이 없습니다.</div>}
+          {todayLectures.map((t, i)=>(
+            <div key={i}>- {t.start_time} {t.subject} ({t.room})</div>
+          ))}
+        </WidgetCard>
+
+        <WidgetCard title="📆 다가올 일정/행사" onClick={()=>router.push('/events')}>
+          {upcoming.map((e)=>(
+            <div key={e.id}>- {new Date(e.event_date).toLocaleDateString()} {e.title} <span className="badge">[{e.type}]</span></div>
+          ))}
+          {upcoming.length===0 && <div>다가올 일정이 없습니다.</div>}
+        </WidgetCard>
+
+        <WidgetCard title="🚌 셔틀버스 현황" onClick={()=>router.push('/shuttle')}>
+          {shuttle.map(s=>(
+            <div key={s.id}>[{s.bus_id}] {s.status} → {s.next_stop} <span className="badge">{s.updated_at}</span></div>
+          ))}
+        </WidgetCard>
+
+        <WidgetCard title="📢 공지 더보기" onClick={()=>router.push('/notice')}>
+          최신 공지를 모두 보려면 클릭하세요.
+        </WidgetCard>
+      </div>
+    </Layout>
+  );
+}
+
+
+    import { useEffect, useState } from 'react';
+import Layout from '../../components/Layout';
+import api from '../../lib/api';
+import { useRequireAuth } from '../../lib/auth';
+import Link from 'next/link';
+
+export default function NoticeList() {
+  useRequireAuth();
+  const [list, setList] = useState([]);
+  useEffect(()=>{ api.get('/notices').then(r=>setList(r.data)); }, []);
+  return (
+    <Layout>
+      <div className="card">
+        <h2>공지사항</h2>
+        <ul>
+          {list.map(n=>(
+            <li key={n.id} style={{marginBottom:8}}>
+              <Link href={`/notice/${n.id}`}>{n.title}</Link>
+              <span className="badge" style={{marginLeft:8}}>{n.created_at ? new Date(n.created_at).toLocaleDateString() : ''}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </Layout>
+  );
+}
+
+
+    import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
+import Layout from '../../components/Layout';
+import api from '../../lib/api';
+import { useRequireAuth } from '../../lib/auth';
+
+export default function NoticeDetail() {
+  useRequireAuth();
+  const router = useRouter();
+  const { id } = router.query;
+  const [notice, setNotice] = useState(null);
+
+  useEffect(()=>{ if(id) api.get(`/notices/${id}`).then(r=>setNotice(r.data)); }, [id]);
+
+  return (
+    <Layout>
+      <div className="card">
+        {!notice && '로딩...'}
+        {notice && (
+          <>
+            <h2 style={{marginTop:0}}>{notice.title}</h2>
+            <div className="badge">{notice.created_at ? new Date(notice.created_at).toLocaleString() : ''}</div>
+            <div style={{whiteSpace:'pre-wrap', marginTop:12}}>{notice.content}</div>
+          </>
+        )}
+      </div>
+    </Layout>
+  );
+}
+
+
+    import { useEffect, useState } from 'react';
+import Layout from '../components/Layout';
+import api from '../lib/api';
+import { useRequireAuth } from '../lib/auth';
+
+const days = ['Mon','Tue','Wed','Thu','Fri'];
+
+export default function Timetable() {
+  useRequireAuth();
+  const [rows, setRows] = useState([]);
+
+  useEffect(()=>{ api.get('/timetable').then(r=>setRows(r.data)); }, []);
+
+  return (
+    <Layout>
+      <div className="card">
+        <h2>주간 시간표</h2>
+        <table style={{width:'100%', borderCollapse:'collapse'}}>
+          <thead>
+            <tr>
+              <th style={{textAlign:'left', borderBottom:'1px solid #e5e7eb'}}>요일</th>
+              <th style={{textAlign:'left', borderBottom:'1px solid #e5e7eb'}}>과목</th>
+              <th style={{textAlign:'left', borderBottom:'1px solid #e5e7eb'}}>시간</th>
+              <th style={{textAlign:'left', borderBottom:'1px solid #e5e7eb'}}>강의실</th>
+            </tr>
+          </thead>
+          <tbody>
+            {days.map(d => rows.filter(r=>r.day===d).map((r,i)=>(
+              <tr key={`${d}-${i}`}>
+                <td style={{padding:'8px 0'}}>{r.day}</td>
+                <td>{r.subject}</td>
+                <td>{r.start_time} ~ {r.end_time}</td>
+                <td>{r.room}</td>
+              </tr>
+            )))}
+          </tbody>
+        </table>
+      </div>
+    </Layout>
+  );
+}
+
+
+    import { useEffect, useState } from 'react';
+import Layout from '../../components/Layout';
+import api from '../../lib/api';
+import { useRequireAuth } from '../../lib/auth';
+
+export default function Events() {
+  useRequireAuth();
+  const [type, setType] = useState('');
+  const [rows, setRows] = useState([]);
+
+  useEffect(()=>{
+    const q = type ? `/events?type=${encodeURIComponent(type)}` : '/events';
+    api.get(q).then(r=>setRows(r.data));
+  }, [type]);
+
+  return (
+    <Layout>
+      <div className="card">
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+          <h2>학사일정 / 행사</h2>
+          <div className="row">
+            <button className={`btn secondary`} onClick={()=>setType('')}>전체</button>
+            <button className={`btn secondary`} onClick={()=>setType('학사일정')}>학사일정</button>
+            <button className={`btn secondary`} onClick={()=>setType('행사')}>행사</button>
+          </div>
+        </div>
+        <ul>
+          {rows.map(e=>(
+            <li key={e.id} style={{marginBottom:8}}>
+              {new Date(e.event_date).toLocaleDateString()} - {e.title}
+              <span className="badge" style={{marginLeft:8}}>[{e.type}]</span>
+              {e.description ? <div style={{color:'#374151'}}>{e.description}</div> : null}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </Layout>
+  );
+}
+
+
+    import { useEffect, useState } from 'react';
+import Layout from '../components/Layout';
+import api from '../lib/api';
+import { useRequireAuth } from '../lib/auth';
+
+export default function Shuttle() {
+  useRequireAuth();
+  const [rows, setRows] = useState([]);
+
+  useEffect(()=>{ api.get('/shuttle').then(r=>setRows(r.data)); }, []);
+
+  return (
+    <Layout>
+      <div className="card">
+        <h2>셔틀버스 현황</h2>
+        {rows.length===0 && '데이터 없음'}
+        {rows.map(s=>(
+          <div key={s.id} style={{padding:'8px 0', borderBottom:'1px solid #eee'}}>
+            🚌 <b>{s.bus_id}</b> — {s.status} → 다음정류장: {s.next_stop}
+            <div className="badge">업데이트: {s.updated_at}</div>
+            <div className="badge">({s.lat}, {s.lng})</div>
+          </div>
+        ))}
+      </div>
+    </Layout>
+  );
+}
+
+
+    
