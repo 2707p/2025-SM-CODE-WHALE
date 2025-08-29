@@ -1,72 +1,27 @@
-// index.js
-const express = require("express");
-const app = express();
-const port = 3000;
+<!-- 시간표 섹션 -->
+<section id="timetable">
+  <h2>🗓️ 시간표</h2>
+  <ul>
+    <li>월요일: 수학, 영어, 체육</li>
+    <li>화요일: 과학, 음악, 역사</li>
+    <li>수요일: 국어, 미술, 정보</li>
+  </ul>
+</section>
 
-// 예제 데이터
-const timetable = [
-  { day: "월요일", subjects: ["수학", "영어", "체육"] },
-  { day: "화요일", subjects: ["과학", "음악", "역사"] },
-  { day: "수요일", subjects: ["국어", "미술", "정보"] },
-];
+<!-- 행사 공지 섹션 -->
+<section id="events">
+  <h2>📢 행사 공지</h2>
+  <ul>
+    <li>체육대회 - 2025-09-05</li>
+    <li>과학 전시회 - 2025-09-10</li>
+  </ul>
+</section>
 
-const events = [
-  { title: "체육대회", date: "2025-09-05" },
-  { title: "과학 전시회", date: "2025-09-10" },
-];
-
-const shuttleBuses = [
-  { route: "A코스", status: "운행중", nextTime: "08:30" },
-  { route: "B코스", status: "지연", nextTime: "08:45" },
-];
-
-// 루트 페이지
-app.get("/", (req, res) => {
-  let html = `
-  <!DOCTYPE html>
-  <html lang="ko">
-  <head>
-    <meta charset="UTF-8">
-    <title>학교 포털</title>
-    <style>
-      body { font-family: Arial, sans-serif; background: #f9f9f9; color: #333; margin: 0; padding: 20px; }
-      h1 { color: #2c3e50; }
-      h2 { color: #34495e; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
-      ul { list-style-type: none; padding-left: 0; }
-      li { background: #fff; margin: 5px 0; padding: 10px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-      .section { margin-bottom: 30px; }
-    </style>
-  </head>
-  <body>
-    <h1>학교 포털</h1>
-
-    <div class="section">
-      <h2>시간표</h2>
-      <ul>
-        ${timetable.map(t => `<li><strong>${t.day}:</strong> ${t.subjects.join(", ")}</li>`).join("")}
-      </ul>
-    </div>
-
-    <div class="section">
-      <h2>행사 공지</h2>
-      <ul>
-        ${events.map(e => `<li><strong>${e.date}:</strong> ${e.title}</li>`).join("")}
-      </ul>
-    </div>
-
-    <div class="section">
-      <h2>셔틀버스 정보</h2>
-      <ul>
-        ${shuttleBuses.map(b => `<li><strong>${b.route}</strong> - ${b.status} (다음: ${b.nextTime})</li>`).join("")}
-      </ul>
-    </div>
-  </body>
-  </html>
-  `;
-  res.send(html);
-});
-
-// 서버 시작
-app.listen(port, () => {
-  console.log(`학교 포털 실행 중: http://localhost:${port}`);
-});
+<!-- 셔틀버스 정보 섹션 -->
+<section id="shuttle-bus">
+  <h2>🚌 셔틀버스 정보</h2>
+  <ul>
+    <li>노선 A - 운행중 (다음 출발: 08:30)</li>
+    <li>노선 B - 지연 (다음 출발: 08:45)</li>
+  </ul>
+</section>
