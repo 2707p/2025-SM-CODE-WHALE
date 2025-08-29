@@ -1,132 +1,100 @@
-<!-- 시간표 섹션 -->
-<section id="timetable">
-  <h2>🗓️ 시간표</h2>
-  <ul>
-    <li>월요일: 수학, 영어, 체육</li>
-    <li>화요일: 과학, 음악, 역사</li>
-    <li>수요일: 국어, 미술, 정보</li>
-  </ul>
-</section>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>학교 포털</title>
+  <style>
+    body { font-family: Arial; padding: 20px; background: #f9f9f9; }
+    h1 { color: #2c3e50; }
+    section { margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
+    ul { list-style: none; padding: 0; }
+    li { margin: 5px 0; }
+    .calendar { display: flex; flex-wrap: wrap; width: 280px; }
+    .day { width: 40px; height: 40px; margin: 2px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 5px;}
+    .event { background-color: #f39c12; color: white; }
+    .mood-btn { margin: 5px; }
+  </style>
+</head>
+<body>
+  <h1>학교 포털</h1>
 
-<!-- 행사 공지 섹션 -->
-<section id="events">
-  <h2>📢 행사 공지</h2>
-  <ul>
-    <li>체육대회 - 2025-09-05</li>
-    <li>과학 전시회 - 2025-09-10</li>
-  </ul>
-</section>
+  <section>
+    <h2>시간표</h2>
+    <ul>
+      <li>월요일: 수학, 영어, 체육</li>
+      <li>화요일: 과학, 음악, 역사</li>
+      <li>수요일: 국어, 미술, 정보</li>
+    </ul>
+  </section>
 
-<!-- 셔틀버스 정보 섹션 -->
-<section id="shuttle-bus">
-  <h2>🚌 셔틀버스 정보</h2>
-  <ul>
-    <li>노선 A - 운행중 (다음 출발: 08:30)</li>
-    <li>노선 B - 지연 (다음 출발: 08:45)</li>
-  </ul>
-</section>
-const express = require('express');
-const cors = require('cors');
-const { MongoClient } = require('mongodb');
+  <section>
+    <h2>행사 공지</h2>
+    <ul id="event-list"></ul>
+  </section>
 
-const app = express();
-const port = 5000;
+  <section>
+    <h2>셔틀버스 정보</h2>
+    <ul id="bus-list"></ul>
+  </section>
 
-app.use(cors());
-app.use(express.json());
+  <section>
+    <h2>캘린더</h2>
+    <div class="calendar" id="calendar"></div>
+  </section>
 
-// MongoDB 연결
-const uri = "mongodb://localhost:27017";
-const client = new MongoClient(uri);
-let db;
+  <script>
+    // 데이터
+    const events = [
+      { date: "2025-09-05", title: "체육대회" },
+      { date: "2025-09-10", title: "과학 전시회" }
+    ];
 
-client.connect().then(() => {
-  db = client.db('school_portal');
-  console.log('MongoDB 연결됨');
-});
+    const buses = [
+      { route: "A코스", status: "운행중", nextTime: "08:30" },
+      { route: "B코스", status: "지연", nextTime: "08:45" }
+    ];
 
-// 행사 데이터 가져오기
-app.get('/api/events', async (req, res) => {
-  const events = await db.collection('events').find({}).toArray();
-  res.json(events);
-});
-
-// 마음온도 저장
-app.post('/api/mood', async (req, res) => {
-  const { eventId, studentId, mood, className } = req.body;
-  await db.collection('moods').insertOne({ eventId, studentId, mood, className, createdAt: new Date() });
-  res.json({ success: true });
-});
-
-app.listen(port, () => console.log(`Backend running on http://localhost:${port}`));
-import React from 'react';
-import CalendarComponent from './CalendarComponent';
-
-function App() {
-  return (
-    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
-      <h1>학교 포털 캘린더</h1>
-      <CalendarComponent />
-    </div>
-  );
-}
-
-export default App;
-import React, { useState, useEffect } from 'react';
-import Calendar from 'react-calendar';
-import 'react-calendar/dist/Calendar.css';
-import axios from 'axios';
-import MoodButton from './MoodButton';
-
-export default function CalendarComponent() {
-  const [events, setEvents] = useState([]);
-  const [selectedEvent, setSelectedEvent] = useState(null);
-
-  useEffect(() => {
-    axios.get('http://localhost:5000/api/events')
-      .then(res => setEvents(res.data));
-  }, []);
-
-  const handleDateClick = (date) => {
-    const dateStr = date.toISOString().slice(0,10);
-    const event = events.find(e => e.date === dateStr);
-    setSelectedEvent(event || null);
-  };
-
-  return (
-    <div>
-      <Calendar onClickDay={handleDateClick} />
-      {selectedEvent && (
-        <MoodButton event={selectedEvent} onClose={() => setSelectedEvent(null)} />
-      )}
-    </div>
-  );
-}
-import React from 'react';
-import axios from 'axios';
-
-export default function MoodButton({ event, onClose }) {
-  const moods = ["행복해요", "지쳤어요", "기대돼요", "슬퍼요"];
-
-  const handleMood = (mood) => {
-    axios.post('http://localhost:5000/api/mood', {
-      eventId: event._id,
-      studentId: "s001", // 예제용, 로그인 구현하면 실제 ID 사용
-      className: "2학년 1반",
-      mood
-    }).then(() => {
-      alert('마음온도 저장 완료!');
-      onClose();
+    // 행사 표시
+    const eventList = document.getElementById('event-list');
+    events.forEach(e => {
+      const li = document.createElement('li');
+      li.textContent = `${e.date} - ${e.title}`;
+      eventList.appendChild(li);
     });
-  };
 
-  return (
-    <div style={{ marginTop: '20px', padding: '10px', border: '1px solid #ccc', borderRadius: '5px' }}>
-      <h3>{event.title} - 마음온도 선택</h3>
-      {moods.map(m => (
-        <button key={m} style={{ margin: '5px' }} onClick={() => handleMood(m)}>{m}</button>
-      ))}
-      <button onClick={onClose} style={{ marginLeft: '10px' }}>닫기</button>
-    </div>
-  );
-}
+    // 버스 표시
+    const busList = document.getElementById('bus-list');
+    buses.forEach(b => {
+      const li = document.createElement('li');
+      li.textContent = `${b.route} - ${b.status} (다음: ${b.nextTime})`;
+      busList.appendChild(li);
+    });
+
+    // 캘린더 생성
+    const calendar = document.getElementById('calendar');
+    for(let d=1; d<=30; d++){
+      const div = document.createElement('div');
+      div.className = 'day';
+      const dateStr = `2025-09-${d.toString().padStart(2,'0')}`;
+      div.textContent = d;
+
+      if(events.some(e=>e.date===dateStr)){
+        div.classList.add('event');
+        div.onclick = () => selectMood(dateStr);
+      }
+
+      calendar.appendChild(div);
+    }
+
+    function selectMood(date){
+      const mood = prompt("마음온도 입력 (행복해요 / 지쳤어요 / 기대돼요 / 슬퍼요):");
+      if(!mood) return;
+      const moods = JSON.parse(localStorage.getItem('moods')||"{}");
+      moods[date] = moods[date] || [];
+      moods[date].push(mood);
+      localStorage.setItem('moods', JSON.stringify(moods));
+      alert('마음온도 저장 완료!');
+    }
+  </script>
+</body>
+</html>
