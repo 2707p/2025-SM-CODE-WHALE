@@ -1,0 +1,71 @@
+import Link from "next/link";
+
+export default function Dashboard() {
+  return (
+    <div className="p-6">
+      {/* 공지 영역 */}
+      <div className="bg-yellow-100 p-4 rounded mb-6">
+        <h2 className="text-xl font-bold mb-2">📢 공지사항</h2>
+        <ul>
+          <li><Link href="/notice/1">[필독] 2학기 수강신청 일정</Link></li>
+          <li><Link href="/notice/2">셔틀버스 노선 변경 안내</Link></li>
+          <li><Link href="/notice/3">도서관 개관시간 변경</Link></li>
+        </ul>
+        <Link href="/notice"><span className="text-blue-600">더보기 →</span></Link>
+      </div>
+
+      {/* 위젯 영역 */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* 시간표 위젯 */}
+        <Link href="/timetable">
+          <div className="bg-blue-100 p-4 rounded cursor-pointer hover:bg-blue-200">
+            <h3 className="font-bold">📅 오늘의 시간표</h3>
+            <p>- 09:00 자료구조 (IT301)</p>
+            <p>- 13:00 알고리즘 (IT405)</p>
+          </div>
+        </Link>
+
+        {/* 학사일정 위젯 */}
+        <Link href="/events">
+          <div className="bg-green-100 p-4 rounded cursor-pointer hover:bg-green-200">
+            <h3 className="font-bold">📆 이번 주 학사일정</h3>
+            <p>개강일: 9/1</p>
+            <p>수강정정: 9/3 ~ 9/5</p>
+          </div>
+        </Link>
+
+        {/* 셔틀버스 위젯 */}
+        <Link href="/shuttle">
+          <div className="bg-purple-100 p-4 rounded cursor-pointer hover:bg-purple-200">
+            <h3 className="font-bold">🚌 셔틀버스 현황</h3>
+            <p>현재: A01 → 정문 도착 예정</p>
+          </div>
+        </Link>
+
+        {/* 행사 위젯 */}
+        <Link href="/events?type=행사">
+          <div className="bg-pink-100 p-4 rounded cursor-pointer hover:bg-pink-200">
+            <h3 className="font-bold">🎉 다가올 행사</h3>
+            <p>동아리 박람회 - 9/7</p>
+          </div>
+        </Link>
+      </div>
+    </div>
+  );
+}
+import { useRouter } from "next/router";
+
+export default function NoticeDetail() {
+  const router = useRouter();
+  const { id } = router.query;
+
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold">공지 상세 페이지</h1>
+      <p>이 페이지는 공지 번호 {id} 에 대한 상세 내용을 보여줍니다.</p>
+      <div className="mt-4 p-4 border rounded">
+        <p>예시: 2학기 수강신청은 9월 1일부터 진행됩니다.</p>
+      </div>
+    </div>
+  );
+}
