@@ -1,71 +1,230 @@
-import Link from "next/link";
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>창원 성민여자고등학교 포털</title>
+<style>
+  body { font-family: Arial; padding: 20px; background: #f9f9f9; }
+  h1, h2 { color: #2c3e50; }
+  section { margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
+  table { border-collapse: collapse; width: 100%; text-align: center; }
+  th, td { border: 1px solid #ccc; padding: 8px; }
+  .calendar { display: flex; flex-wrap: wrap; width: 280px; margin-bottom: 10px; }
+  .day { width: 40px; height: 40px; margin: 2px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 5px; }
+  .event { background-color: #f39c12; color: white; }
+  .mood-btn { margin: 3px; cursor: pointer; }
+  .mood-display { margin-top: 5px; }
+  .bamboo { margin-top: 10px; }
+  input[type="text"], input[type="password"] { padding: 5px; margin: 3px; }
+</style>
+</head>
+<body>
 
-export default function Dashboard() {
-  return (
-    <div className="p-6">
-      {/* 공지 영역 */}
-      <div className="bg-yellow-100 p-4 rounded mb-6">
-        <h2 className="text-xl font-bold mb-2">📢 공지사항</h2>
-        <ul>
-          <li><Link href="/notice/1">[필독] 2학기 수강신청 일정</Link></li>
-          <li><Link href="/notice/2">셔틀버스 노선 변경 안내</Link></li>
-          <li><Link href="/notice/3">도서관 개관시간 변경</Link></li>
-        </ul>
-        <Link href="/notice"><span className="text-blue-600">더보기 →</span></Link>
-      </div>
+<h1>창원 성민여자고등학교 포털</h1>
 
-      {/* 위젯 영역 */}
-      <div className="grid grid-cols-2 gap-4">
-        {/* 시간표 위젯 */}
-        <Link href="/timetable">
-          <div className="bg-blue-100 p-4 rounded cursor-pointer hover:bg-blue-200">
-            <h3 className="font-bold">📅 오늘의 시간표</h3>
-            <p>- 09:00 자료구조 (IT301)</p>
-            <p>- 13:00 알고리즘 (IT405)</p>
-          </div>
-        </Link>
+<section id="login-section">
+  <h2>로그인</h2>
+  <input id="login-id" placeholder="아이디">
+  <input id="login-pw" type="password" placeholder="비밀번호">
+  <button onclick="login()">로그인</button>
+</section>
 
-        {/* 학사일정 위젯 */}
-        <Link href="/events">
-          <div className="bg-green-100 p-4 rounded cursor-pointer hover:bg-green-200">
-            <h3 className="font-bold">📆 이번 주 학사일정</h3>
-            <p>개강일: 9/1</p>
-            <p>수강정정: 9/3 ~ 9/5</p>
-          </div>
-        </Link>
+<section id="portal-section" style="display:none">
+  <button onclick="logout()">로그아웃</button>
 
-        {/* 셔틀버스 위젯 */}
-        <Link href="/shuttle">
-          <div className="bg-purple-100 p-4 rounded cursor-pointer hover:bg-purple-200">
-            <h3 className="font-bold">🚌 셔틀버스 현황</h3>
-            <p>현재: A01 → 정문 도착 예정</p>
-          </div>
-        </Link>
+  <section>
+    <h2>시간표</h2>
+    <div id="timetable"></div>
+  </section>
 
-        {/* 행사 위젯 */}
-        <Link href="/events?type=행사">
-          <div className="bg-pink-100 p-4 rounded cursor-pointer hover:bg-pink-200">
-            <h3 className="font-bold">🎉 다가올 행사</h3>
-            <p>동아리 박람회 - 9/7</p>
-          </div>
-        </Link>
-      </div>
+  <section>
+    <h2>캘린더</h2>
+    <div class="calendar" id="calendar"></div>
+    <div id="mood-section"></div>
+  </section>
+
+  <section>
+    <h2>셔틀버스 정보</h2>
+    <ul id="bus-list"></ul>
+  </section>
+
+  <section>
+    <h2>대나무숲 게시판</h2>
+    <div class="bamboo">
+      <input type="text" id="bamboo-input" placeholder="익명 글 작성...">
+      <button onclick="postBamboo()">게시</button>
     </div>
-  );
-}
-import { useRouter } from "next/router";
+    <ul id="bamboo-list"></ul>
+  </section>
+</section>
 
-export default function NoticeDetail() {
-  const router = useRouter();
-  const { id } = router.query;
+<script>
+  // ===== 로그인 & 유저 데이터 =====
+  const users = [
+    {id: 's001', password: '1234', grade: 2, class: 7},
+    {id: 's002', password: 'abcd', grade: 2, class: 8}
+  ];
 
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold">공지 상세 페이지</h1>
-      <p>이 페이지는 공지 번호 {id} 에 대한 상세 내용을 보여줍니다.</p>
-      <div className="mt-4 p-4 border rounded">
-        <p>예시: 2학기 수강신청은 9월 1일부터 진행됩니다.</p>
-      </div>
-    </div>
-  );
-}
+  function login() {
+    const id = document.getElementById('login-id').value;
+    const pw = document.getElementById('login-pw').value;
+    const user = users.find(u=>u.id===id && u.password===pw);
+    if(user){
+      alert(`로그인 성공! ${user.grade}학년 ${user.class}반`);
+      localStorage.setItem('currentUser', JSON.stringify(user));
+      document.getElementById('login-section').style.display='none';
+      document.getElementById('portal-section').style.display='block';
+      showTimetable(user);
+      renderCalendar();
+      renderBusInfo();
+      showBamboo();
+    } else {
+      alert('아이디 또는 비밀번호가 틀렸습니다.');
+    }
+  }
+
+  function logout(){
+    localStorage.removeItem('currentUser');
+    location.reload();
+  }
+
+  // ===== 시간표 데이터 (예시) =====
+  const timetables = {
+    "2-7":[
+      ["국어","수학","영어","과학","체육"],
+      ["국어","수학","영어","과학","체육"],
+      ["역사","음악","미술","정보","영어"],
+      ["과학","체육","국어","수학","영어"],
+      ["영어","과학","체육","역사","음악"]
+    ],
+    "2-8":[
+      ["수학","국어","영어","미술","체육"],
+      ["수학","국어","영어","음악","체육"],
+      ["역사","과학","국어","영어","체육"],
+      ["과학","영어","국어","체육","음악"],
+      ["영어","체육","수학","과학","역사"]
+    ]
+  };
+
+  function showTimetable(user){
+    const key = `${user.grade}-${user.class}`;
+    const tableDiv = document.getElementById('timetable');
+    const table = document.createElement('table');
+    const days = ["월","화","수","목","금"];
+    const thead = document.createElement('thead');
+    const tr = document.createElement('tr');
+    tr.innerHTML="<th>교시</th>"+days.map(d=>`<th>${d}</th>`).join("");
+    thead.appendChild(tr);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    for(let i=0;i<5;i++){
+      const tr = document.createElement('tr');
+      tr.innerHTML="<td>"+(i+1)+"교시</td>"+timetables[key][i].map(c=>`<td>${c}</td>`).join("");
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    tableDiv.appendChild(table);
+  }
+
+  // ===== 셔틀버스 정보 =====
+  const buses = [
+    {route:"A코스", status:"운행중", next:"08:30"},
+    {route:"B코스", status:"지연", next:"08:45"}
+  ];
+  function renderBusInfo(){
+    const busList = document.getElementById('bus-list');
+    buses.forEach(b=>{
+      const li=document.createElement('li');
+      li.textContent=`${b.route} - ${b.status} (다음: ${b.next})`;
+      busList.appendChild(li);
+    });
+  }
+
+  // ===== 캘린더 & 마음온도 =====
+  const events = [
+    {date:"2025-09-05", title:"체육대회"},
+    {date:"2025-09-10", title:"과학전시회"}
+  ];
+  const moodsData = JSON.parse(localStorage.getItem('moods')||"{}");
+
+  function renderCalendar(){
+    const calendar = document.getElementById('calendar');
+    calendar.innerHTML="";
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    const firstDay = new Date(year, month,1).getDay(); // 요일
+    const lastDate = new Date(year, month+1,0).getDate();
+
+    // 빈칸 추가
+    for(let i=0;i<firstDay;i++){
+      const div=document.createElement('div');
+      div.className='day'; div.style.visibility='hidden';
+      calendar.appendChild(div);
+    }
+
+    for(let d=1;d<=lastDate;d++){
+      const div=document.createElement('div');
+      div.className='day';
+      const dateStr = `${year}-${(month+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
+      div.textContent=d;
+
+      if(events.some(e=>e.date===dateStr)){
+        div.classList.add('event');
+        div.onclick=()=>selectMood(dateStr);
+      }
+
+      calendar.appendChild(div);
+    }
+  }
+
+  function selectMood(date){
+    const emojis=["😄","😓","😍","😢"];
+    const mood = prompt(`마음온도 선택: ${emojis.join(" ")}`);
+    if(!mood) return;
+    moodsData[date]=moodsData[date]||[];
+    moodsData[date].push(mood);
+    localStorage.setItem('moods', JSON.stringify(moodsData));
+    showMood(date);
+  }
+
+  function showMood(date){
+    const section=document.getElementById('mood-section');
+    section.innerHTML=`<h3>${date} 마음온도</h3>`;
+    const display = document.createElement('div');
+    display.className='mood-display';
+    display.textContent=moodsData[date].join(" ");
+    section.appendChild(display);
+
+    const moreBtn=document.createElement('button');
+    moreBtn.textContent="더보기";
+    moreBtn.onclick=()=>alert(moodsData[date].join("\n"));
+    section.appendChild(moreBtn);
+  }
+
+  // ===== 대나무숲 게시판 =====
+  function postBamboo(){
+    const input=document.getElementById('bamboo-input');
+    const text=input.value.trim();
+    if(!text) return;
+    const list=JSON.parse(localStorage.getItem('bamboo')||"[]");
+    list.push({text,time:new Date().toLocaleString()});
+    localStorage.setItem('bamboo',JSON.stringify(list));
+    input.value='';
+    showBamboo();
+  }
+  function showBamboo(){
+    const list=JSON.parse(localStorage.getItem('bamboo')||"[]");
+    const ul=document.getElementById('bamboo-list');
+    ul.innerHTML='';
+    list.forEach(item=>{
+      const li=document.createElement('li');
+      li.textContent=`[${item.time}] ${item.text}`;
+      ul.appendChild(li);
+    });
+  }
+
+</script>
+</body>
+</html>
