@@ -37,8 +37,8 @@ input[type="text"], input[type="password"], input[type="number"] { padding: 5px;
   <h2>회원가입</h2>
   <input id="signup-id" placeholder="아이디">
   <input id="signup-pw" type="password" placeholder="비밀번호">
-  <input id="signup-grade" type="number" placeholder="학년(1~3)">
-  <input id="signup-class" type="number" placeholder="반(1~8)">
+  <input id="signup-grade" type="number" placeholder="학년">
+  <input id="signup-class" type="number" placeholder="반">
   <button onclick="signup()">가입하기</button>
   <button onclick="hideSignup()">취소</button>
 </section>
@@ -90,51 +90,9 @@ input[type="text"], input[type="password"], input[type="number"] { padding: 5px;
 </section>
 
 <script>
-// ===== 데이터 초기화 =====
-let users;
-try {
-  users = JSON.parse(localStorage.getItem('users')) || [];
-  if(!Array.isArray(users)) users = [];
-} catch(e) { users = []; }
+let users = JSON.parse(localStorage.getItem('users')||"[]");
 
-let moodsData;
-try { moodsData = JSON.parse(localStorage.getItem('moods')) || {}; } catch(e){ moodsData = {}; }
-
-let bambooPosts;
-try { bambooPosts = JSON.parse(localStorage.getItem('bamboo')) || []; } catch(e){ bambooPosts = []; }
-
-// ===== 회원가입/로그인 =====
-function showSignup(){ document.getElementById('login-section').style.display='none'; document.getElementById('signup-section').style.display='block'; }
-function hideSignup(){ document.getElementById('signup-section').style.display='none'; document.getElementById('login-section').style.display='block'; }
-
-function signup(){
-  const id = document.getElementById('signup-id').value.trim();
-  const pw = document.getElementById('signup-pw').value.trim();
-  const grade = parseInt(document.getElementById('signup-grade').value);
-  const cls = parseInt(document.getElementById('signup-class').value);
-
-  if(!id || !pw || isNaN(grade) || isNaN(cls)){
-    alert("모든 항목을 정확히 입력해주세요!");
-    return;
-  }
-  if(grade<1 || grade>3){ alert("학년은 1~3학년만 가능합니다."); return; }
-  if(cls<1 || cls>8){ alert("반은 1~8반만 가능합니다."); return; }
-  if(users.some(u=>u.id===id)){ alert("이미 존재하는 아이디입니다."); return; }
-
-  const newUser = {id:id, password:pw, grade:grade, class:cls};
-  users.push(newUser);
-  localStorage.setItem('users', JSON.stringify(users));
-  localStorage.setItem('currentUser', JSON.stringify(newUser));
-
-  alert("회원가입 완료! 자동 로그인됩니다.");
-  document.getElementById('signup-section').style.display='none';
-  document.getElementById('portal-section').style.display='block';
-  showTimetable(newUser);
-  renderCalendar();
-  renderBusInfo();
-  showBamboo();
-}
-
+// ===== 로그인 / 회원가입 =====
 function login(){
   const id=document.getElementById('login-id').value.trim();
   const pw=document.getElementById('login-pw').value.trim();
@@ -149,50 +107,15 @@ function login(){
     showBamboo();
   } else alert('아이디 또는 비밀번호가 틀렸습니다.');
 }
-function logout(){ localStorage.removeItem('currentUser'); location.reload(); }
-
-// ===== 시간표 =====
-const timetables = {};
-for(let g=1; g<=3; g++){
-  for(let c=1; c<=8; c++){
-    timetables[`${g}-${c}`] = [
-      ["국어","수학","영어","과학","체육"],
-      ["영어","역사","수학","음악","체육"],
-      ["과학","국어","미술","체육","영어"],
-      ["수학","과학","체육","영어","음악"],
-      ["체육","영어","역사","미술","과학"]
-    ];
-  }
+function logout(){
+  localStorage.removeItem('currentUser');
+  location.reload();
 }
-
-function showTimetable(user){
-  const key = `${user.grade}-${user.class}`;
-  const tableDiv = document.getElementById('timetable'); tableDiv.innerHTML="";
-  const table = document.createElement('table');
-  const days = ["월","화","수","목","금"];
-  const thead = document.createElement('thead');
-  const tr = document.createElement('tr'); tr.innerHTML="<th>교시</th>"+days.map(d=>`<th>${d}</th>`).join(""); thead.appendChild(tr); table.appendChild(thead);
-  const tbody = document.createElement('tbody');
-  for(let i=0;i<5;i++){
-    const tr = document.createElement('tr');
-    tr.innerHTML="<td>"+(i+1)+"교시</td>"+timetables[key][i].map(c=>`<td>${c}</td>`).join("");
-    tbody.appendChild(tr);
-  }
-  table.appendChild(tbody); tableDiv.appendChild(table);
-}
-
-// ===== 셔틀버스 =====
-const buses=[{route:"A코스",status:"운행중",next:"08:30"},{route:"B코스",status:"지연",next:"08:45"}];
-function renderBusInfo(){
-  const busList=document.getElementById('bus-list'); busList.innerHTML="";
-  buses.forEach(b=>{
-    const li=document.createElement('li'); li.textContent=`${b.route} - ${b.status} (다음: ${b.next})`; busList.appendChild(li);
-  });
-}
-
-// ===== 캘린더 + 마음온도 =====
-// (마지막 메시지 글자 제한 때문에 나머지 캘린더, 마음온도, 대나무숲 기능까지 이어서 작성 가능)
-</script>
-
-</body>
-</html>
+function showSignup(){ document.getElementById('login-section').style.display='none'; document.getElementById('signup-section').style.display='block'; }
+function hideSignup(){ document.getElementById('signup-section').style.display='none'; document.getElementById('login-section').style.display='block'; }
+function signup(){
+  const id=document.getElementById('signup-id').value.trim();
+  const pw=document.getElementById('signup-pw').value.trim();
+  const grade=parseInt(document.getElementById('signup-grade').value);
+  const cls=parseInt(document.getElementById('signup-class').value);
+  if(!id || !pw || isNaN(grade) ||
