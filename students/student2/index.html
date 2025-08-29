@@ -15,16 +15,17 @@ th, td { border: 1px solid #ccc; padding: 8px; }
 .mood-btn { margin: 3px; cursor: pointer; font-size: 20px;}
 .mood-display { margin-top: 5px; }
 .bamboo { margin-top: 10px; }
-input[type="text"], input[type="password"], input[type="number"] { padding: 5px; margin: 3px; }
+input[type="text"], input[type="password"], input[type="number"], textarea { padding: 5px; margin: 3px; width: 200px;}
 .pagination { margin-top:10px; }
 .pagination button { margin:2px; }
-.comment { margin-left:20px; font-size:14px; }
+.comment-list { margin-left:20px; font-size:14px; }
 </style>
 </head>
 <body>
 
 <h1>창원 성민여자고등학교 포털</h1>
 
+<!-- 로그인 -->
 <section id="login-section">
   <h2>로그인</h2>
   <input id="login-id" placeholder="아이디">
@@ -33,24 +34,28 @@ input[type="text"], input[type="password"], input[type="number"] { padding: 5px;
   <p>계정이 없나요? <button onclick="showSignup()">회원가입</button></p>
 </section>
 
+<!-- 회원가입 -->
 <section id="signup-section" style="display:none">
   <h2>회원가입</h2>
   <input id="signup-id" placeholder="아이디">
   <input id="signup-pw" type="password" placeholder="비밀번호">
-  <input id="signup-grade" type="number" placeholder="학년">
-  <input id="signup-class" type="number" placeholder="반">
+  <input id="signup-grade" type="number" placeholder="학년(1~3)">
+  <input id="signup-class" type="number" placeholder="반(1~8)">
   <button onclick="signup()">가입하기</button>
   <button onclick="hideSignup()">취소</button>
 </section>
 
+<!-- 포털 -->
 <section id="portal-section" style="display:none">
   <button onclick="logout()">로그아웃</button>
 
+  <!-- 시간표 -->
   <section>
     <h2>시간표</h2>
     <div id="timetable"></div>
   </section>
 
+  <!-- 캘린더 + 마음온도 -->
   <section>
     <h2>캘린더</h2>
     <div>
@@ -62,11 +67,13 @@ input[type="text"], input[type="password"], input[type="number"] { padding: 5px;
     <div id="mood-section"></div>
   </section>
 
+  <!-- 셔틀버스 -->
   <section>
     <h2>셔틀버스 정보</h2>
     <ul id="bus-list"></ul>
   </section>
 
+  <!-- 대나무숲 -->
   <section>
     <h2>대나무숲 게시판</h2>
     <div class="bamboo">
@@ -78,6 +85,7 @@ input[type="text"], input[type="password"], input[type="number"] { padding: 5px;
   </section>
 </section>
 
+<!-- 대나무숲 상세 페이지 -->
 <section id="bamboo-detail" style="display:none">
   <h2>대나무숲 상세보기</h2>
   <div>
@@ -90,27 +98,30 @@ input[type="text"], input[type="password"], input[type="number"] { padding: 5px;
 </section>
 
 <script>
+/* ===================== 초기화 ===================== */
 let users = JSON.parse(localStorage.getItem('users')||"[]");
+let moodsData = JSON.parse(localStorage.getItem('moods')||"{}");
+let currentUser = null;
+let bambooPosts = JSON.parse(localStorage.getItem('bamboo')||"[]");
+let currentMonth = new Date();
+let events=[{date:"2025-09-05",title:"체육대회"},{date:"2025-09-10",title:"과학전시회"}];
+const buses=[{route:"A코스",status:"운행중",next:"08:30"},{route:"B코스",status:"지연",next:"08:45"}];
 
-// ===== 로그인 / 회원가입 =====
+/* ===================== 로그인/회원가입 ===================== */
 function login(){
-  const id=document.getElementById('login-id').value.trim();
-  const pw=document.getElementById('login-pw').value.trim();
+  const id=document.getElementById('login-id').value;
+  const pw=document.getElementById('login-pw').value;
   const user=users.find(u=>u.id===id && u.password===pw);
   if(user){
+    alert(`로그인 성공! ${user.grade}학년 ${user.class}반`);
+    currentUser=user;
     localStorage.setItem('currentUser', JSON.stringify(user));
     document.getElementById('login-section').style.display='none';
     document.getElementById('portal-section').style.display='block';
-    showTimetable(user);
-    renderCalendar();
-    renderBusInfo();
-    showBamboo();
+    showTimetable(user); renderCalendar(); renderBusInfo(); showBamboo();
   } else alert('아이디 또는 비밀번호가 틀렸습니다.');
 }
-function logout(){
-  localStorage.removeItem('currentUser');
-  location.reload();
-}
+function logout(){ currentUser=null; location.reload(); }
 function showSignup(){ document.getElementById('login-section').style.display='none'; document.getElementById('signup-section').style.display='block'; }
 function hideSignup(){ document.getElementById('signup-section').style.display='none'; document.getElementById('login-section').style.display='block'; }
 function signup(){
@@ -118,4 +129,135 @@ function signup(){
   const pw=document.getElementById('signup-pw').value.trim();
   const grade=parseInt(document.getElementById('signup-grade').value);
   const cls=parseInt(document.getElementById('signup-class').value);
-  if(!id || !pw || isNaN(grade) ||
+  if(!id||!pw||!grade||!cls){ alert("모든 항목을 입력해주세요"); return;}
+  if(users.some(u=>u.id===id)){ alert("이미 존재하는 아이디입니다."); return;}
+  users.push({id:id,password:pw,grade:grade,class:cls});
+  localStorage.setItem('users', JSON.stringify(users));
+  alert("회원가입 완료! 로그인 해주세요.");
+  hideSignup();
+}
+
+/* ===================== 시간표 ===================== */
+const timetables = {};
+for(let g=1; g<=3; g++){
+  for(let c=1; c<=8; c++){
+    timetables[`${g}-${c}`] = [
+      ["국어","수학","영어","과학","체육"],
+      ["영어","역사","수학","음악","체육"],
+      ["과학","국어","미술","체육","영어"],
+      ["수학","과학","체육","영어","음악"],
+      ["체육","영어","역사","미술","과학"]
+    ];
+  }
+}
+function showTimetable(user){
+  const key = `${user.grade}-${user.class}`;
+  const tableDiv = document.getElementById('timetable'); tableDiv.innerHTML="";
+  const table = document.createElement('table');
+  const days = ["월","화","수","목","금"];
+  const thead = document.createElement('thead');
+  const tr = document.createElement('tr'); tr.innerHTML="<th>교시</th>"+days.map(d=>`<th>${d}</th>`).join(""); thead.appendChild(tr); table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  for(let i=0;i<5;i++){
+    const tr = document.createElement('tr');
+    tr.innerHTML="<td>"+(i+1)+"교시</td>"+timetables[key][i].map(c=>`<td>${c}</td>`).join("");
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody); tableDiv.appendChild(table);
+}
+
+/* ===================== 셔틀버스 ===================== */
+function renderBusInfo(){
+  const busList=document.getElementById('bus-list'); busList.innerHTML="";
+  buses.forEach(b=>{
+    const li=document.createElement('li'); li.textContent=`${b.route} - ${b.status} (다음: ${b.next})`; busList.appendChild(li);
+  });
+}
+
+/* ===================== 캘린더 + 마음온도 ===================== */
+function renderCalendar(){
+  const calendar=document.getElementById('calendar'); calendar.innerHTML="";
+  const year=currentMonth.getFullYear(); const month=currentMonth.getMonth();
+  document.getElementById('calendar-month').textContent=`${year}년 ${month+1}월`;
+  const firstDay=new Date(year,month,1).getDay();
+  const lastDate=new Date(year,month+1,0).getDate();
+  for(let i=0;i<firstDay;i++){ const div=document.createElement('div'); div.className='day'; div.style.visibility='hidden'; calendar.appendChild(div);}
+  for(let d=1; d<=lastDate; d++){
+    const div=document.createElement('div'); div.className='day';
+    const dateStr=`${year}-${(month+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
+    div.textContent=d;
+    if(events.some(e=>e.date===dateStr)){ div.classList.add('event'); div.onclick=()=>selectMood(dateStr);}
+    calendar.appendChild(div);
+  }
+}
+function changeMonth(dir){ currentMonth.setMonth(currentMonth.getMonth()+dir); renderCalendar();}
+function selectMood(date){
+  const emojis=["😄","😓","😍","😢"];
+  const section=document.getElementById('mood-section'); section.innerHTML=`<h3>${date} 마음온도</h3>`;
+  emojis.forEach(e=>{
+    const btn=document.createElement('button'); btn.textContent=e; btn.className='mood-btn';
+    btn.onclick=()=>{ moodsData[date]=moodsData[date]||[]; moodsData[date].push(e); localStorage.setItem('moods',JSON.stringify(moodsData)); showMood(date);};
+    section.appendChild(btn);
+  });
+  showMood(date);
+}
+function showMood(date){
+  const section=document.getElementById('mood-section');
+  if(!moodsData[date]) return;
+  const div=document.createElement('div'); div.className='mood-display'; div.textContent=moodsData[date].join(" "); section.appendChild(div);
+  const moreBtn=document.createElement('button'); moreBtn.textContent="더보기"; moreBtn.onclick=()=>alert(moodsData[date].join("\n")); section.appendChild(moreBtn);
+}
+
+/* ===================== 대나무숲 ===================== */
+function showBamboo(){
+  const ul=document.getElementById('bamboo-list'); ul.innerHTML="";
+  bambooPosts.forEach((p,i)=>{ const li=document.createElement('li'); li.textContent=p.text; ul.appendChild(li); });
+}
+function postBamboo(){
+  const input=document.getElementById('bamboo-input'); const text=input.value.trim(); if(!text) return;
+  bambooPosts.push({text,time:new Date().toLocaleString(),comments:[],likes:0,dislikes:0});
+  localStorage.setItem('bamboo',JSON.stringify(bambooPosts)); input.value=''; showBamboo();
+}
+
+/* ===================== 대나무숲 상세보기 ===================== */
+let itemsPerPage=5, currentPage=1;
+function showBambooDetail(){ document.getElementById('portal-section').style.display='none'; document.getElementById('bamboo-detail').style.display='block'; currentPage=1; renderBambooDetail(); }
+function hideBambooDetail(){ document.getElementById('bamboo-detail').style.display='none'; document.getElementById('portal-section').style.display='block'; }
+function postBambooDetail(){
+  const input=document.getElementById('bamboo-detail-input'); const text=input.value.trim(); if(!text) return;
+  bambooPosts.push({text,time:new Date().toLocaleString(),comments:[],likes:0,dislikes:0});
+  localStorage.setItem('bamboo',JSON.stringify(bambooPosts)); input.value=''; renderBambooDetail();
+}
+function renderBambooDetail(){
+  const list=document.getElementById('bamboo-detail-list'); list.innerHTML="";
+  const start=(currentPage-1)*itemsPerPage; const end=start+itemsPerPage; const pageItems=bambooPosts.slice(start,end);
+  pageItems.forEach((p,i)=>{
+    const li=document.createElement('li');
+    li.innerHTML=`<strong>${p.text}</strong> [${p.time}] <br>추천: ${p.likes} 비추천: ${p.dislikes}<br>`;
+    const likeBtn=document.createElement('button'); likeBtn.textContent="👍"; likeBtn.onclick=()=>{p.likes++; localStorage.setItem('bamboo',JSON.stringify(bambooPosts)); renderBambooDetail();};
+    const dislikeBtn=document.createElement('button'); dislikeBtn.textContent="👎"; dislikeBtn.onclick=()=>{p.dislikes++; localStorage.setItem('bamboo',JSON.stringify(bambooPosts)); renderBambooDetail();};
+    li.appendChild(likeBtn); li.appendChild(dislikeBtn);
+    // 댓글
+    const commentInput=document.createElement('input'); commentInput.placeholder="댓글 작성"; 
+    const commentBtn=document.createElement('button'); commentBtn.textContent="댓글"; commentBtn.onclick=()=>{p.comments.push(commentInput.value); localStorage.setItem('bamboo',JSON.stringify(bambooPosts)); renderBambooDetail();};
+    li.appendChild(commentInput); li.appendChild(commentBtn);
+    if(p.comments.length>0){
+      const cdiv=document.createElement('div'); cdiv.className='comment-list'; cdiv.textContent=p.comments.join(", "); li.appendChild(cdiv);
+    }
+    list.appendChild(li);
+  });
+  // 페이지네이션
+  const totalPages=Math.ceil(bambooPosts.length/itemsPerPage);
+  const pagination=document.getElementById('bamboo-pagination'); pagination.innerHTML="";
+  for(let i=1;i<=totalPages;i++){
+    const btn=document.createElement('button'); btn.textContent=i; btn.onclick=(()=>{ currentPage=i; renderBambooDetail(); });
+    pagination.appendChild(btn);
+  }
+}
+
+// ===================== 초기 화면 =====================
+showBamboo();
+</script>
+
+</body>
+</html>
