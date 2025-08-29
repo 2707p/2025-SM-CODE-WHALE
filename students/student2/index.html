@@ -9,66 +9,101 @@
   section { margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
   table { border-collapse: collapse; width: 100%; text-align: center; }
   th, td { border: 1px solid #ccc; padding: 8px; }
-  .calendar { display: flex; flex-wrap: wrap; width: 280px; margin-bottom: 10px; }
+  .calendar { display: flex; flex-wrap: wrap; width: 300px; margin-bottom: 10px; }
   .day { width: 40px; height: 40px; margin: 2px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 5px; }
   .event { background-color: #f39c12; color: white; }
-  .mood-btn { margin: 3px; cursor: pointer; }
+  .mood-btn { margin: 3px; cursor: pointer; font-size: 20px;}
   .mood-display { margin-top: 5px; }
   .bamboo { margin-top: 10px; }
-  input[type="text"], input[type="password"] { padding: 5px; margin: 3px; }
+  input[type="text"], input[type="password"], input[type="number"] { padding: 5px; margin: 3px; }
+  .pagination { margin-top:10px; }
+  .pagination button { margin:2px; }
 </style>
 </head>
 <body>
 
 <h1>창원 성민여자고등학교 포털</h1>
 
+<!-- 로그인 -->
 <section id="login-section">
   <h2>로그인</h2>
   <input id="login-id" placeholder="아이디">
   <input id="login-pw" type="password" placeholder="비밀번호">
   <button onclick="login()">로그인</button>
+  <p>계정이 없나요? <button onclick="showSignup()">회원가입</button></p>
 </section>
 
+<!-- 회원가입 -->
+<section id="signup-section" style="display:none">
+  <h2>회원가입</h2>
+  <input id="signup-id" placeholder="아이디">
+  <input id="signup-pw" type="password" placeholder="비밀번호">
+  <input id="signup-grade" type="number" placeholder="학년">
+  <input id="signup-class" type="number" placeholder="반">
+  <button onclick="signup()">가입하기</button>
+  <button onclick="hideSignup()">취소</button>
+</section>
+
+<!-- 포털 -->
 <section id="portal-section" style="display:none">
   <button onclick="logout()">로그아웃</button>
 
+  <!-- 시간표 -->
   <section>
     <h2>시간표</h2>
     <div id="timetable"></div>
   </section>
 
+  <!-- 캘린더 -->
   <section>
     <h2>캘린더</h2>
+    <div>
+      <button onclick="changeMonth(-1)">◀ 이전</button>
+      <span id="calendar-month"></span>
+      <button onclick="changeMonth(1)">다음 ▶</button>
+    </div>
     <div class="calendar" id="calendar"></div>
     <div id="mood-section"></div>
   </section>
 
+  <!-- 셔틀버스 -->
   <section>
     <h2>셔틀버스 정보</h2>
     <ul id="bus-list"></ul>
   </section>
 
+  <!-- 대나무숲 -->
   <section>
     <h2>대나무숲 게시판</h2>
     <div class="bamboo">
       <input type="text" id="bamboo-input" placeholder="익명 글 작성...">
       <button onclick="postBamboo()">게시</button>
+      <button onclick="showBambooDetail()">자세히 보기</button>
     </div>
     <ul id="bamboo-list"></ul>
   </section>
 </section>
 
-<script>
-  // ===== 로그인 & 유저 데이터 =====
-  const users = [
-    {id: 's001', password: '1234', grade: 2, class: 7},
-    {id: 's002', password: 'abcd', grade: 2, class: 8}
-  ];
+<!-- 대나무숲 상세 페이지 -->
+<section id="bamboo-detail" style="display:none">
+  <h2>대나무숲 상세보기</h2>
+  <div>
+    <input type="text" id="bamboo-detail-input" placeholder="익명 글 작성...">
+    <button onclick="postBambooDetail()">게시</button>
+    <button onclick="hideBambooDetail()">닫기</button>
+  </div>
+  <ul id="bamboo-detail-list"></ul>
+  <div class="pagination" id="bamboo-pagination"></div>
+</section>
 
-  function login() {
-    const id = document.getElementById('login-id').value;
-    const pw = document.getElementById('login-pw').value;
-    const user = users.find(u=>u.id===id && u.password===pw);
+<script>
+  // ===== 유저 데이터 =====
+  let users = JSON.parse(localStorage.getItem('users')||"[]");
+
+  function login(){
+    const id=document.getElementById('login-id').value;
+    const pw=document.getElementById('login-pw').value;
+    const user=users.find(u=>u.id===id && u.password===pw);
     if(user){
       alert(`로그인 성공! ${user.grade}학년 ${user.class}반`);
       localStorage.setItem('currentUser', JSON.stringify(user));
@@ -78,9 +113,7 @@
       renderCalendar();
       renderBusInfo();
       showBamboo();
-    } else {
-      alert('아이디 또는 비밀번호가 틀렸습니다.');
-    }
+    } else alert('아이디 또는 비밀번호가 틀렸습니다.');
   }
 
   function logout(){
@@ -88,27 +121,32 @@
     location.reload();
   }
 
-  // ===== 시간표 데이터 (예시) =====
-  const timetables = {
-    "2-7":[
-      ["국어","수학","영어","과학","체육"],
-      ["국어","수학","영어","과학","체육"],
-      ["역사","음악","미술","정보","영어"],
-      ["과학","체육","국어","수학","영어"],
-      ["영어","과학","체육","역사","음악"]
-    ],
-    "2-8":[
-      ["수학","국어","영어","미술","체육"],
-      ["수학","국어","영어","음악","체육"],
-      ["역사","과학","국어","영어","체육"],
-      ["과학","영어","국어","체육","음악"],
-      ["영어","체육","수학","과학","역사"]
-    ]
-  };
+  function showSignup(){ document.getElementById('login-section').style.display='none'; document.getElementById('signup-section').style.display='block'; }
+  function hideSignup(){ document.getElementById('signup-section').style.display='none'; document.getElementById('login-section').style.display='block'; }
 
+  function signup(){
+    const id=document.getElementById('signup-id').value.trim();
+    const pw=document.getElementById('signup-pw').value.trim();
+    const grade=parseInt(document.getElementById('signup-grade').value);
+    const cls=parseInt(document.getElementById('signup-class').value);
+    if(!id||!pw||!grade||!cls){ alert("모든 항목을 입력해주세요"); return;}
+    if(users.some(u=>u.id===id)){ alert("이미 존재하는 아이디입니다."); return;}
+    const newUser={id:id,password:pw,grade:grade,class:cls};
+    users.push(newUser);
+    localStorage.setItem('users', JSON.stringify(users));
+    alert("회원가입 완료! 로그인 해주세요.");
+    hideSignup();
+  }
+
+  // ===== 시간표 데이터 =====
+  const timetables = {
+    "2-7":[["국어","수학","영어","과학","체육"],["국어","수학","영어","과학","체육"],["역사","음악","미술","정보","영어"],["과학","체육","국어","수학","영어"],["영어","과학","체육","역사","음악"]],
+    "2-8":[["수학","국어","영어","미술","체육"],["수학","국어","영어","음악","체육"],["역사","과학","국어","영어","체육"],["과학","영어","국어","체육","음악"],["영어","체육","수학","과학","역사"]]
+  };
   function showTimetable(user){
     const key = `${user.grade}-${user.class}`;
     const tableDiv = document.getElementById('timetable');
+    tableDiv.innerHTML="";
     const table = document.createElement('table');
     const days = ["월","화","수","목","금"];
     const thead = document.createElement('thead');
@@ -116,7 +154,6 @@
     tr.innerHTML="<th>교시</th>"+days.map(d=>`<th>${d}</th>`).join("");
     thead.appendChild(tr);
     table.appendChild(thead);
-
     const tbody = document.createElement('tbody');
     for(let i=0;i<5;i++){
       const tr = document.createElement('tr');
@@ -127,13 +164,11 @@
     tableDiv.appendChild(table);
   }
 
-  // ===== 셔틀버스 정보 =====
-  const buses = [
-    {route:"A코스", status:"운행중", next:"08:30"},
-    {route:"B코스", status:"지연", next:"08:45"}
-  ];
+  // ===== 셔틀버스 =====
+  const buses=[{route:"A코스",status:"운행중",next:"08:30"},{route:"B코스",status:"지연",next:"08:45"}];
   function renderBusInfo(){
-    const busList = document.getElementById('bus-list');
+    const busList=document.getElementById('bus-list');
+    busList.innerHTML="";
     buses.forEach(b=>{
       const li=document.createElement('li');
       li.textContent=`${b.route} - ${b.status} (다음: ${b.next})`;
@@ -141,90 +176,79 @@
     });
   }
 
-  // ===== 캘린더 & 마음온도 =====
-  const events = [
-    {date:"2025-09-05", title:"체육대회"},
-    {date:"2025-09-10", title:"과학전시회"}
-  ];
-  const moodsData = JSON.parse(localStorage.getItem('moods')||"{}");
+  // ===== 캘린더 + 마음온도 =====
+  let currentMonth=new Date();
+  const events=[{date:"2025-09-05",title:"체육대회"},{date:"2025-09-10",title:"과학전시회"}];
+  let moodsData=JSON.parse(localStorage.getItem('moods')||"{}");
 
   function renderCalendar(){
-    const calendar = document.getElementById('calendar');
+    const calendar=document.getElementById('calendar');
     calendar.innerHTML="";
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth();
-    const firstDay = new Date(year, month,1).getDay(); // 요일
-    const lastDate = new Date(year, month+1,0).getDate();
+    const year=currentMonth.getFullYear();
+    const month=currentMonth.getMonth();
+    document.getElementById('calendar-month').textContent=`${year}년 ${month+1}월`;
 
-    // 빈칸 추가
+    const firstDay=new Date(year,month,1).getDay();
+    const lastDate=new Date(year,month+1,0).getDate();
+
     for(let i=0;i<firstDay;i++){
-      const div=document.createElement('div');
-      div.className='day'; div.style.visibility='hidden';
-      calendar.appendChild(div);
+      const div=document.createElement('div'); div.className='day'; div.style.visibility='hidden'; calendar.appendChild(div);
     }
-
     for(let d=1;d<=lastDate;d++){
-      const div=document.createElement('div');
-      div.className='day';
-      const dateStr = `${year}-${(month+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
+      const div=document.createElement('div'); div.className='day';
+      const dateStr=`${year}-${(month+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
       div.textContent=d;
-
-      if(events.some(e=>e.date===dateStr)){
-        div.classList.add('event');
-        div.onclick=()=>selectMood(dateStr);
-      }
-
+      if(events.some(e=>e.date===dateStr)){ div.classList.add('event'); div.onclick=()=>selectMood(dateStr);}
       calendar.appendChild(div);
     }
   }
-
+  function changeMonth(dir){ currentMonth.setMonth(currentMonth.getMonth()+dir); renderCalendar();}
   function selectMood(date){
     const emojis=["😄","😓","😍","😢"];
-    const mood = prompt(`마음온도 선택: ${emojis.join(" ")}`);
-    if(!mood) return;
-    moodsData[date]=moodsData[date]||[];
-    moodsData[date].push(mood);
-    localStorage.setItem('moods', JSON.stringify(moodsData));
-    showMood(date);
-  }
-
-  function showMood(date){
     const section=document.getElementById('mood-section');
     section.innerHTML=`<h3>${date} 마음온도</h3>`;
-    const display = document.createElement('div');
-    display.className='mood-display';
-    display.textContent=moodsData[date].join(" ");
-    section.appendChild(display);
-
-    const moreBtn=document.createElement('button');
-    moreBtn.textContent="더보기";
-    moreBtn.onclick=()=>alert(moodsData[date].join("\n"));
+    emojis.forEach(e=>{
+      const btn=document.createElement('button'); btn.textContent=e; btn.className='mood-btn';
+      btn.onclick=()=>{ moodsData[date]=moodsData[date]||[]; moodsData[date].push(e); localStorage.setItem('moods',JSON.stringify(moodsData)); showMood(date);};
+      section.appendChild(btn);
+    });
+    showMood(date);
+  }
+  function showMood(date){
+    const section=document.getElementById('mood-section');
+    const div=document.createElement('div'); div.className='mood-display';
+    div.textContent=moodsData[date].join(" ");
+    section.appendChild(div);
+    const moreBtn=document.createElement('button'); moreBtn.textContent="더보기"; moreBtn.onclick=()=>alert(moodsData[date].join("\n"));
     section.appendChild(moreBtn);
   }
 
-  // ===== 대나무숲 게시판 =====
+  // ===== 대나무숲 =====
   function postBamboo(){
     const input=document.getElementById('bamboo-input');
-    const text=input.value.trim();
-    if(!text) return;
+    const text=input.value.trim(); if(!text) return;
     const list=JSON.parse(localStorage.getItem('bamboo')||"[]");
     list.push({text,time:new Date().toLocaleString()});
     localStorage.setItem('bamboo',JSON.stringify(list));
-    input.value='';
-    showBamboo();
+    input.value=''; showBamboo();
   }
   function showBamboo(){
     const list=JSON.parse(localStorage.getItem('bamboo')||"[]");
-    const ul=document.getElementById('bamboo-list');
-    ul.innerHTML='';
-    list.forEach(item=>{
-      const li=document.createElement('li');
-      li.textContent=`[${item.time}] ${item.text}`;
-      ul.appendChild(li);
-    });
+    const ul=document.getElementById('bamboo-list'); ul.innerHTML='';
+    list.forEach(item=>{ const li=document.createElement('li'); li.textContent=`[${item.time}] ${item.text}`; ul.appendChild(li); });
   }
 
-</script>
-</body>
-</html>
+  // ===== 대나무숲 상세 =====
+  const itemsPerPage=5; let currentPage=1;
+  function showBambooDetail(){
+    document.getElementById('portal-section').style.display='none';
+    document.getElementById('bamboo-detail').style.display='block';
+    currentPage=1; renderBambooDetail();
+  }
+  function hideBambooDetail(){ document.getElementById('bamboo-detail').style.display='none'; document.getElementById('portal-section').style.display='block'; }
+  function postBambooDetail(){
+    const input=document.getElementById('bamboo-detail-input');
+    const text=input.value.trim(); if(!text) return;
+    const list=JSON.parse(localStorage.getItem('bamboo')||"[]");
+    list.push({text,time:new Date().toLocaleString()});
+    localStorage.setItem
