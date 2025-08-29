@@ -1,100 +1,160 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <title>학교 포털</title>
-  <style>
-    body { font-family: Arial; padding: 20px; background: #f9f9f9; }
-    h1 { color: #2c3e50; }
-    section { margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
-    ul { list-style: none; padding: 0; }
-    li { margin: 5px 0; }
-    .calendar { display: flex; flex-wrap: wrap; width: 280px; }
-    .day { width: 40px; height: 40px; margin: 2px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 5px;}
-    .event { background-color: #f39c12; color: white; }
-    .mood-btn { margin: 5px; }
-  </style>
+<meta charset="UTF-8">
+<title>학교 포털 업그레이드</title>
+<style>
+  body { font-family: Arial; padding: 20px; background: #f9f9f9; }
+  h1 { color: #2c3e50; }
+  section { margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
+  ul { list-style: none; padding: 0; }
+  li { margin: 5px 0; }
+  .calendar { display: flex; flex-wrap: wrap; width: 280px; }
+  .day { width: 40px; height: 40px; margin: 2px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 5px; }
+  .event { background-color: #f39c12; color: white; }
+  .mood-btn { margin: 5px; }
+  .mood-stat { margin-top: 10px; padding: 10px; border-radius: 5px; }
+  .bamboo { margin-top: 10px; }
+  input[type="text"] { width: 80%; padding: 5px; }
+</style>
 </head>
 <body>
-  <h1>학교 포털</h1>
+<h1>학교 포털 업그레이드</h1>
 
-  <section>
-    <h2>시간표</h2>
-    <ul>
-      <li>월요일: 수학, 영어, 체육</li>
-      <li>화요일: 과학, 음악, 역사</li>
-      <li>수요일: 국어, 미술, 정보</li>
-    </ul>
-  </section>
+<section>
+  <h2>시간표</h2>
+  <ul>
+    <li>월요일: 수학, 영어, 체육</li>
+    <li>화요일: 과학, 음악, 역사</li>
+    <li>수요일: 국어, 미술, 정보</li>
+  </ul>
+</section>
 
-  <section>
-    <h2>행사 공지</h2>
-    <ul id="event-list"></ul>
-  </section>
+<section>
+  <h2>행사 공지</h2>
+  <ul id="event-list"></ul>
+</section>
 
-  <section>
-    <h2>셔틀버스 정보</h2>
-    <ul id="bus-list"></ul>
-  </section>
+<section>
+  <h2>셔틀버스 정보</h2>
+  <ul id="bus-list"></ul>
+</section>
 
-  <section>
-    <h2>캘린더</h2>
-    <div class="calendar" id="calendar"></div>
-  </section>
+<section>
+  <h2>캘린더</h2>
+  <div class="calendar" id="calendar"></div>
+  <div id="mood-stats"></div>
+</section>
 
-  <script>
-    // 데이터
-    const events = [
-      { date: "2025-09-05", title: "체육대회" },
-      { date: "2025-09-10", title: "과학 전시회" }
-    ];
+<section>
+  <h2>대나무숲 게시판</h2>
+  <div class="bamboo">
+    <input type="text" id="bamboo-input" placeholder="익명 글 작성...">
+    <button onclick="postBamboo()">게시</button>
+  </div>
+  <ul id="bamboo-list"></ul>
+</section>
 
-    const buses = [
-      { route: "A코스", status: "운행중", nextTime: "08:30" },
-      { route: "B코스", status: "지연", nextTime: "08:45" }
-    ];
+<script>
+  // 데이터
+  const events = [
+    { date: "2025-09-05", title: "체육대회" },
+    { date: "2025-09-10", title: "과학 전시회" }
+  ];
 
-    // 행사 표시
-    const eventList = document.getElementById('event-list');
-    events.forEach(e => {
-      const li = document.createElement('li');
-      li.textContent = `${e.date} - ${e.title}`;
-      eventList.appendChild(li);
-    });
+  const buses = [
+    { route: "A코스", status: "운행중", nextTime: "08:30" },
+    { route: "B코스", status: "지연", nextTime: "08:45" }
+  ];
 
-    // 버스 표시
-    const busList = document.getElementById('bus-list');
-    buses.forEach(b => {
-      const li = document.createElement('li');
-      li.textContent = `${b.route} - ${b.status} (다음: ${b.nextTime})`;
-      busList.appendChild(li);
-    });
+  // 행사 표시
+  const eventList = document.getElementById('event-list');
+  events.forEach(e => {
+    const li = document.createElement('li');
+    li.textContent = `${e.date} - ${e.title}`;
+    eventList.appendChild(li);
+  });
 
-    // 캘린더 생성
-    const calendar = document.getElementById('calendar');
-    for(let d=1; d<=30; d++){
-      const div = document.createElement('div');
-      div.className = 'day';
-      const dateStr = `2025-09-${d.toString().padStart(2,'0')}`;
-      div.textContent = d;
+  // 버스 표시
+  const busList = document.getElementById('bus-list');
+  buses.forEach(b => {
+    const li = document.createElement('li');
+    li.textContent = `${b.route} - ${b.status} (다음: ${b.nextTime})`;
+    busList.appendChild(li);
+  });
 
-      if(events.some(e=>e.date===dateStr)){
-        div.classList.add('event');
-        div.onclick = () => selectMood(dateStr);
-      }
-
-      calendar.appendChild(div);
+  // 캘린더 생성
+  const calendar = document.getElementById('calendar');
+  for(let d=1; d<=30; d++){
+    const div = document.createElement('div');
+    div.className = 'day';
+    const dateStr = `2025-09-${d.toString().padStart(2,'0')}`;
+    div.textContent = d;
+    if(events.some(e=>e.date===dateStr)){
+      div.classList.add('event');
+      div.onclick = () => selectMood(dateStr);
     }
+    calendar.appendChild(div);
+  }
 
-    function selectMood(date){
-      const mood = prompt("마음온도 입력 (행복해요 / 지쳤어요 / 기대돼요 / 슬퍼요):");
-      if(!mood) return;
-      const moods = JSON.parse(localStorage.getItem('moods')||"{}");
-      moods[date] = moods[date] || [];
-      moods[date].push(mood);
-      localStorage.setItem('moods', JSON.stringify(moods));
-      alert('마음온도 저장 완료!');
+  // 마음온도 선택
+  function selectMood(date){
+    const mood = prompt("마음온도 입력 (행복해요 / 지쳤어요 / 기대돼요 / 슬퍼요):");
+    if(!mood) return;
+    const moods = JSON.parse(localStorage.getItem('moods')||"{}");
+    moods[date] = moods[date] || [];
+    moods[date].push(mood);
+    localStorage.setItem('moods', JSON.stringify(moods));
+    alert('마음온도 저장 완료!');
+    showMoodStats();
+  }
+
+  // 마음온도 통계 표시
+  function showMoodStats(){
+    const moods = JSON.parse(localStorage.getItem('moods')||"{}");
+    const statsDiv = document.getElementById('mood-stats');
+    statsDiv.innerHTML = "<h3>마음온도 통계</h3>";
+    for(const date in moods){
+      const arr = moods[date];
+      const counts = {};
+      arr.forEach(m=>counts[m]=(counts[m]||0)+1);
+      const avgMood = arr.includes("지쳤어요") ? 'red' : 'green';
+      const statDiv = document.createElement('div');
+      statDiv.className = 'mood-stat';
+      statDiv.style.backgroundColor = avgMood;
+      statDiv.textContent = `${date}: ${JSON.stringify(counts)}`;
+      statsDiv.appendChild(statDiv);
     }
-  </script>
+  }
+
+  showMoodStats();
+
+  // 대나무숲 게시판
+  function postBamboo(){
+    const input = document.getElementById('bamboo-input');
+    const text = input.value.trim();
+    if(!text) return;
+    const list = JSON.parse(localStorage.getItem('bamboo')||"[]");
+    const ip = navigator.userAgent;
+    list.push({text, ip, time: new Date().toLocaleString()});
+    localStorage.setItem('bamboo', JSON.stringify(list));
+    input.value = '';
+    showBamboo();
+  }
+
+  function showBamboo(){
+    const list = JSON.parse(localStorage.getItem('bamboo')||"[]");
+    const ul = document.getElementById('bamboo-list');
+    ul.innerHTML = '';
+    list.forEach(item=>{
+      const li = document.createElement('li');
+      li.textContent = `[${item.time}] 익명(${item.ip}): ${item.text}`;
+      ul.appendChild(li);
+    });
+  }
+
+  showBamboo();
+</script>
 </body>
 </html>
+
