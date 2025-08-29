@@ -25,3 +25,108 @@
     <li>노선 B - 지연 (다음 출발: 08:45)</li>
   </ul>
 </section>
+const express = require('express');
+const cors = require('cors');
+const { MongoClient } = require('mongodb');
+
+const app = express();
+const port = 5000;
+
+app.use(cors());
+app.use(express.json());
+
+// MongoDB 연결
+const uri = "mongodb://localhost:27017";
+const client = new MongoClient(uri);
+let db;
+
+client.connect().then(() => {
+  db = client.db('school_portal');
+  console.log('MongoDB 연결됨');
+});
+
+// 행사 데이터 가져오기
+app.get('/api/events', async (req, res) => {
+  const events = await db.collection('events').find({}).toArray();
+  res.json(events);
+});
+
+// 마음온도 저장
+app.post('/api/mood', async (req, res) => {
+  const { eventId, studentId, mood, className } = req.body;
+  await db.collection('moods').insertOne({ eventId, studentId, mood, className, createdAt: new Date() });
+  res.json({ success: true });
+});
+
+app.listen(port, () => console.log(`Backend running on http://localhost:${port}`));
+import React from 'react';
+import CalendarComponent from './CalendarComponent';
+
+function App() {
+  return (
+    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
+      <h1>학교 포털 캘린더</h1>
+      <CalendarComponent />
+    </div>
+  );
+}
+
+export default App;
+import React, { useState, useEffect } from 'react';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
+import axios from 'axios';
+import MoodButton from './MoodButton';
+
+export default function CalendarComponent() {
+  const [events, setEvents] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+
+  useEffect(() => {
+    axios.get('http://localhost:5000/api/events')
+      .then(res => setEvents(res.data));
+  }, []);
+
+  const handleDateClick = (date) => {
+    const dateStr = date.toISOString().slice(0,10);
+    const event = events.find(e => e.date === dateStr);
+    setSelectedEvent(event || null);
+  };
+
+  return (
+    <div>
+      <Calendar onClickDay={handleDateClick} />
+      {selectedEvent && (
+        <MoodButton event={selectedEvent} onClose={() => setSelectedEvent(null)} />
+      )}
+    </div>
+  );
+}
+import React from 'react';
+import axios from 'axios';
+
+export default function MoodButton({ event, onClose }) {
+  const moods = ["행복해요", "지쳤어요", "기대돼요", "슬퍼요"];
+
+  const handleMood = (mood) => {
+    axios.post('http://localhost:5000/api/mood', {
+      eventId: event._id,
+      studentId: "s001", // 예제용, 로그인 구현하면 실제 ID 사용
+      className: "2학년 1반",
+      mood
+    }).then(() => {
+      alert('마음온도 저장 완료!');
+      onClose();
+    });
+  };
+
+  return (
+    <div style={{ marginTop: '20px', padding: '10px', border: '1px solid #ccc', borderRadius: '5px' }}>
+      <h3>{event.title} - 마음온도 선택</h3>
+      {moods.map(m => (
+        <button key={m} style={{ margin: '5px' }} onClick={() => handleMood(m)}>{m}</button>
+      ))}
+      <button onClick={onClose} style={{ marginLeft: '10px' }}>닫기</button>
+    </div>
+  );
+}
