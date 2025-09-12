@@ -4,278 +4,357 @@
 <meta charset="UTF-8">
 <title>창원 성민여자고등학교 포털</title>
 <style>
-body { font-family: Arial; padding: 0; margin:0; background:#f9f9f9; }
-header { display:flex; justify-content:space-between; align-items:center; padding:10px 20px; background:#2c3e50; color:white; }
-header h1 { margin:0; font-size:20px; }
-main { padding:20px; transition: margin-left 0.3s; }
-section { margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
-button { cursor:pointer; }
-input { padding:5px; margin:3px; }
-table { border-collapse: collapse; width: 100%; text-align:center;}
-th, td { border:1px solid #ccc; padding:8px;}
-.calendar { display:flex; flex-wrap:wrap; width:300px; margin-bottom:10px;}
-.day { width:40px; height:40px; margin:2px; display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:5px;}
-.event { background-color:#f39c12; color:white;}
-.mood-btn { margin:3px; cursor:pointer; font-size:20px;}
-.mood-display { margin-top:5px;}
-.bamboo { margin-top:10px;}
-#sidebar { position:fixed; top:0; left:-25%; width:25%; height:100%; background:#ecf0f1; box-shadow:2px 0 5px rgba(0,0,0,0.2); padding:10px; transition:left 0.3s; overflow-y:auto;}
-#sidebar img { width:50px; height:50px; border-radius:50%; display:block; margin:auto; }
-#sidebar ul { list-style:none; padding:0; }
-#sidebar ul li { padding:10px; cursor:pointer; margin:5px 0; background:#bdc3c7; border-radius:5px;}
-#sidebar ul li:hover { background:#95a5a6;}
-#main { transition: margin-left 0.3s; }
-.profile-section img { width:80px; height:80px; border-radius:50%; }
-.profile-section input[type=text]{ width:100%; padding:5px; margin:5px 0;}
+  body { font-family: Arial; margin:0; padding:0; background:#f0f2f5; }
+  #main { display:flex; transition: all 0.3s ease; }
+  #sidebar { width:0; background:#fff; height:100vh; overflow:hidden; position:fixed; top:0; left:0; box-shadow:2px 0 5px rgba(0,0,0,0.1); transition: all 0.3s ease; padding-top:50px;}
+  #sidebar button { display:block; width:90%; margin:10px auto; padding:8px; text-align:left; cursor:pointer; }
+  #content { flex:1; padding:20px; margin-left:0; transition: all 0.3s ease;}
+  .hidden { display:none; }
+  h1,h2,h3 { color:#2c3e50; }
+  input,button,select { padding:5px; margin:3px; }
+  table { border-collapse: collapse; width:100%; text-align:center; margin-top:10px;}
+  th, td { border:1px solid #ccc; padding:8px; }
+  .calendar { display:flex; flex-wrap:wrap; width:300px; margin-top:10px; }
+  .day { width:40px; height:40px; margin:2px; display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:5px; }
+  .event { background:#f39c12; color:#fff; }
+  .mood-btn { margin:3px; cursor:pointer; font-size:20px;}
+  .mood-display { margin-top:5px; }
+  #more-btn { cursor:pointer; padding:5px; background:#3498db; color:white; border:none; border-radius:3px; margin-top:5px;}
+  #bamboo-list li { cursor:pointer; margin:5px 0; }
+  #bamboo-detail-list li { margin:3px 0; }
+  .pagination button { margin:2px; }
 </style>
 </head>
 <body>
 
-<header>
-  <h1>성민여자고등학교 포털</h1>
-  <button onclick="toggleSidebar()">☰ 더보기</button>
-</header>
-
-<div id="sidebar">
-  <img src="https://via.placeholder.com/50" id="sidebar-profile-img" onclick="showProfile()">
-  <ul>
-    <li onclick="showNotice()">공지</li>
-    <li onclick="showCalendarPage()">캘린더</li>
-    <li onclick="showTimetablePage()">시간표</li>
-    <li onclick="showBamboo()">대나무숲</li>
-    <li onclick="showBus()">셔틀버스</li>
-  </ul>
+<!-- 로그인 -->
+<div id="login-screen">
+  <h1>창원 성민여자고등학교 포털</h1>
+  <input id="login-id" placeholder="아이디">
+  <input id="login-pw" type="password" placeholder="비밀번호">
+  <button onclick="login()">로그인</button>
+  <p>계정이 없나요? <button onclick="showSignup()">회원가입</button></p>
 </div>
 
-<main id="main">
-  <!-- 로그인 -->
-  <section id="login-section">
-    <h2>로그인</h2>
-    <input id="login-id" placeholder="아이디">
-    <input id="login-pw" type="password" placeholder="비밀번호">
-    <button onclick="login()">로그인</button>
-    <p>계정이 없나요? <button onclick="showSignup()">회원가입</button></p>
-  </section>
+<!-- 회원가입 -->
+<div id="signup-screen" class="hidden">
+  <h1>회원가입</h1>
+  <input id="signup-id" placeholder="아이디">
+  <input id="signup-pw" type="password" placeholder="비밀번호">
+  <input id="signup-grade" type="number" placeholder="학년 (1~3)">
+  <input id="signup-class" type="number" placeholder="반 (1~8)">
+  <button onclick="signup()">가입</button>
+  <button onclick="hideSignup()">취소</button>
+</div>
 
-  <!-- 회원가입 -->
-  <section id="signup-section" style="display:none">
-    <h2>회원가입</h2>
-    <input id="signup-id" placeholder="아이디">
-    <input id="signup-pw" type="password" placeholder="비밀번호">
-    <input id="signup-grade" type="number" placeholder="학년">
-    <input id="signup-class" type="number" placeholder="반">
-    <button onclick="signup()">가입하기</button>
-    <button onclick="hideSignup()">취소</button>
-  </section>
-
-  <!-- 포털 -->
-  <section id="portal-section" style="display:none">
+<!-- 메인 -->
+<div id="main-screen" class="hidden">
+  <button id="toggle-sidebar" onclick="toggleSidebar()">더보기 ☰</button>
+  <div id="sidebar">
+    <button onclick="showProfile()">계정</button>
+    <button onclick="showPortal('공지')">공지</button>
+    <button onclick="showPortal('캘린더')">캘린더</button>
+    <button onclick="showPortal('시간표')">시간표</button>
+    <button onclick="showPortal('대나무숲')">대나무숲</button>
+    <button onclick="showPortal('셔틀버스')">셔틀버스</button>
     <button onclick="logout()">로그아웃</button>
+  </div>
+  <div id="content">
+    <!-- 프로필 -->
+    <div id="profile" class="hidden">
+      <h2>개인 페이지</h2>
+      <p>프로필 이미지: <input type="file" id="profile-img"></p>
+      <p>이름: <input id="profile-name" placeholder="이름"></p>
+      <p>학년반: <span id="profile-gradeclass"></span></p>
+      <p>아이디: <span id="profile-id"></span></p>
+      <p>진로: <input id="profile-career" placeholder="진로"></p>
+      <button onclick="saveProfile()">저장</button>
+    </div>
 
-    <section id="timetable-section">
+    <!-- 공지 -->
+    <div id="공지" class="hidden">
+      <h2>공지</h2>
+      <p>학교 공지사항 예시입니다.</p>
+    </div>
+
+    <!-- 시간표 -->
+    <div id="시간표" class="hidden">
       <h2>시간표</h2>
       <div id="timetable"></div>
-    </section>
+    </div>
 
-    <section id="calendar-section">
+    <!-- 캘린더 -->
+    <div id="캘린더" class="hidden">
       <h2>캘린더</h2>
-      <div>
-        <button onclick="changeMonth(-1)">◀ 이전</button>
-        <span id="calendar-month"></span>
-        <button onclick="changeMonth(1)">다음 ▶</button>
-      </div>
+      <button onclick="changeMonth(-1)">◀ 이전</button>
+      <span id="calendar-month"></span>
+      <button onclick="changeMonth(1)">다음 ▶</button>
       <div class="calendar" id="calendar"></div>
       <div id="mood-section"></div>
-    </section>
+    </div>
 
-    <section id="bus-section">
+    <!-- 셔틀버스 -->
+    <div id="셔틀버스" class="hidden">
       <h2>셔틀버스 정보</h2>
       <ul id="bus-list"></ul>
-    </section>
+    </div>
 
-    <section id="bamboo-section">
+    <!-- 대나무숲 -->
+    <div id="대나무숲" class="hidden">
       <h2>대나무숲 게시판</h2>
       <button onclick="showBambooDetail()">자세히 보기</button>
       <ul id="bamboo-list"></ul>
-    </section>
-  </section>
-
-  <!-- 개인 페이지 -->
-  <section id="profile-section" style="display:none">
-    <h2>개인 페이지</h2>
-    <div class="profile-section">
-      <img src="https://via.placeholder.com/80" id="profile-img">
-      <p>이름: <span id="profile-name"></span></p>
-      <p>학년/반: <span id="profile-gradeclass"></span></p>
-      <p>아이디: <span id="profile-id"></span></p>
-      <p>진로: <input type="text" id="profile-career"></p>
-      <button onclick="backToPortal()">돌아가기</button>
     </div>
-  </section>
 
-  <!-- 대나무숲 상세 -->
-  <section id="bamboo-detail" style="display:none">
-    <h2>대나무숲 상세보기</h2>
-    <button onclick="backToPortalFromBamboo()">닫기</button>
-    <div>
-      <input type="text" id="bamboo-detail-input" placeholder="익명 글 작성...">
-      <button onclick="postBambooDetail()">게시</button>
+    <!-- 대나무숲 상세보기 -->
+    <div id="bamboo-detail" class="hidden">
+      <h2>대나무숲 상세보기</h2>
+      <button onclick="showBambooWrite()">글쓰기</button>
+      <div id="bamboo-write" class="hidden">
+        <input type="text" id="bamboo-write-input" placeholder="익명 글 작성...">
+        <button onclick="postBambooDetail()">게시</button>
+      </div>
+      <input id="bamboo-search" placeholder="제목/내용 검색" oninput="searchBamboo()">
+      <ul id="bamboo-detail-list"></ul>
+      <div class="pagination" id="bamboo-pagination"></div>
     </div>
-    <ul id="bamboo-detail-list"></ul>
-    <div class="pagination" id="bamboo-pagination"></div>
-  </section>
 
-</main>
+  </div>
+</div>
 
 <script>
-let sidebarOpen=false;
-function toggleSidebar(){
-  const sb=document.getElementById('sidebar');
-  const main=document.getElementById('main');
-  sidebarOpen=!sidebarOpen;
-  if(sidebarOpen){ sb.style.left='0'; main.style.marginLeft='25%'; }
-  else { sb.style.left='-25%'; main.style.marginLeft='0'; }
-}
+  // ===== 유저 데이터 =====
+  let users = JSON.parse(localStorage.getItem('users')||"[]");
+  let currentUser=null;
 
-// ===== 유저 데이터 =====
-let users=JSON.parse(localStorage.getItem('users')||"[]");
-
-function login(){
-  const id=document.getElementById('login-id').value.trim();
-  const pw=document.getElementById('login-pw').value.trim();
-  const user=users.find(u=>u.id===id && u.password===pw);
-  if(user){
-    localStorage.setItem('currentUser', JSON.stringify(user));
-    document.getElementById('login-section').style.display='none';
-    document.getElementById('signup-section').style.display='none';
-    document.getElementById('portal-section').style.display='block';
-    showTimetable(user);
-    renderCalendar();
-    renderBus();
-    showBamboo();
-  }else alert('아이디 또는 비밀번호가 틀렸습니다.');
-}
-
-function logout(){ localStorage.removeItem('currentUser'); location.reload(); }
-
-function showSignup(){ document.getElementById('login-section').style.display='none'; document.getElementById('signup-section').style.display='block'; }
-function hideSignup(){ document.getElementById('signup-section').style.display='none'; document.getElementById('login-section').style.display='block'; }
-
-function signup(){
-  const id=document.getElementById('signup-id').value.trim();
-  const pw=document.getElementById('signup-pw').value.trim();
-  const grade=parseInt(document.getElementById('signup-grade').value);
-  const cls=parseInt(document.getElementById('signup-class').value);
-  if(!id||!pw||!grade||!cls){ alert("모든 항목을 입력해주세요"); return; }
-  if(users.some(u=>u.id===id)){ alert("이미 존재하는 아이디입니다."); return; }
-  const newUser={id:id,password:pw,grade:grade,class:cls,name:"학생"+id};
-  users.push(newUser); localStorage.setItem('users',JSON.stringify(users));
-  alert("회원가입 완료! 로그인 해주세요.");
-  hideSignup();
-}
-
-// ===== 시간표 =====
-const timetables={};
-for(let g=1;g<=3;g++){
-  for(let c=1;c<=8;c++){
-    timetables[`${g}-${c}`]=[["국어","수학","영어","과학","체육"],["국어","수학","영어","과학","체육"],["역사","음악","미술","정보","영어"],["과학","체육","국어","수학","영어"],["영어","과학","체육","역사","음악"]];
+  function login(){
+    const id=document.getElementById('login-id').value;
+    const pw=document.getElementById('login-pw').value;
+    const user=users.find(u=>u.id===id && u.password===pw);
+    if(user){
+      currentUser=user;
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('main-screen').classList.remove('hidden');
+      document.getElementById('profile-gradeclass').textContent = `${user.grade}학년 ${user.class}반`;
+      document.getElementById('profile-id').textContent = user.id;
+      showPortal('공지');
+      showTimetable(user);
+      renderBusInfo();
+      renderCalendar();
+      showBamboo();
+    } else alert('아이디 또는 비밀번호가 틀렸습니다.');
   }
-}
 
-function showTimetable(user){
-  const key=`${user.grade}-${user.class}`;
-  const tableDiv=document.getElementById('timetable');
-  tableDiv.innerHTML="";
-  const table=document.createElement('table');
-  const days=["월","화","수","목","금"];
-  const thead=document.createElement('thead');
-  const tr=document.createElement('tr');
-  tr.innerHTML="<th>교시</th>"+days.map(d=>`<th>${d}</th>`).join("");
-  thead.appendChild(tr); table.appendChild(thead);
-  const tbody=document.createElement('tbody');
-  for(let i=0;i<5;i++){
-    const tr=document.createElement('tr');
-    tr.innerHTML="<td>"+(i+1)+"교시</td>"+timetables[key][i].map(c=>`<td>${c}</td>`).join("");
-    tbody.appendChild(tr);
+  function logout(){ location.reload(); }
+
+  function showSignup(){ document.getElementById('login-screen').classList.add('hidden'); document.getElementById('signup-screen').classList.remove('hidden'); }
+  function hideSignup(){ document.getElementById('signup-screen').classList.add('hidden'); document.getElementById('login-screen').classList.remove('hidden'); }
+
+  function signup(){
+    const id=document.getElementById('signup-id').value.trim();
+    const pw=document.getElementById('signup-pw').value.trim();
+    const grade=parseInt(document.getElementById('signup-grade').value);
+    const cls=parseInt(document.getElementById('signup-class').value);
+    if(!id||!pw||!grade||!cls){ alert("모든 항목을 입력해주세요"); return;}
+    if(users.some(u=>u.id===id)){ alert("이미 존재하는 아이디입니다."); return;}
+    const newUser={id:id,password:pw,grade:grade,class:cls};
+    users.push(newUser);
+    localStorage.setItem('users', JSON.stringify(users));
+    alert("회원가입 완료! 로그인 해주세요.");
+    hideSignup();
   }
-  table.appendChild(tbody); tableDiv.appendChild(table);
-}
 
-// ===== 셔틀버스 =====
-const buses=[{route:"A코스",status:"운행중",next:"08:30"},{route:"B코스",status:"지연",next:"08:45"}];
-function renderBus(){
-  const ul=document.getElementById('bus-list'); ul.innerHTML="";
-  buses.forEach(b=>{
-    const li=document.createElement('li');
-    li.textContent=`${b.route} - ${b.status} (다음: ${b.next})`;
-    ul.appendChild(li);
-  });
-}
-
-// ===== 캘린더 + 마음온도 =====
-let currentMonth=new Date();
-const events=[{date:"2025-09-05",title:"체육대회"},{date:"2025-09-10",title:"과학전시회"}];
-let moodsData=JSON.parse(localStorage.getItem('moods')||"{}");
-
-function renderCalendar(){
-  const calendar=document.getElementById('calendar'); calendar.innerHTML="";
-  const year=currentMonth.getFullYear();
-  const month=currentMonth.getMonth();
-  document.getElementById('calendar-month').textContent=`${year}년 ${month+1}월`;
-  const firstDay=new Date(year,month,1).getDay();
-  const lastDate=new Date(year,month+1,0).getDate();
-  for(let i=0;i<firstDay;i++){ const div=document.createElement('div'); div.className='day'; div.style.visibility='hidden'; calendar.appendChild(div); }
-  for(let d=1;d<=lastDate;d++){
-    const div=document.createElement('div'); div.className='day';
-    const dateStr=`${year}-${(month+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
-    div.textContent=d;
-    if(events.some(e=>e.date===dateStr)){ div.classList.add('event'); div.onclick=()=>selectMood(dateStr);}
-    calendar.appendChild(div);
+  // ===== 사이드바 =====
+  let sidebarOpen=false;
+  function toggleSidebar(){
+    sidebarOpen=!sidebarOpen;
+    document.getElementById('sidebar').style.width = sidebarOpen?'25%':'0';
+    document.getElementById('content').style.marginLeft = sidebarOpen?'25%':'0';
   }
-}
 
-function changeMonth(dir){ currentMonth.setMonth(currentMonth.getMonth()+dir); renderCalendar(); }
+  function showPortal(page){
+    ['공지','시간표','캘린더','셔틀버스','대나무숲','profile'].forEach(p=>document.getElementById(p).classList.add('hidden'));
+    if(page==='계정'){ showProfile(); return;}
+    document.getElementById(page).classList.remove('hidden');
+  }
 
-function selectMood(date){
-  const emojis=["😄","😓","😍","😢"];
-  const section=document.getElementById('mood-section'); section.innerHTML=`<h3>${date} 마음온도</h3>`;
-  emojis.forEach(e=>{
-    const btn=document.createElement('button'); btn.textContent=e; btn.className='mood-btn';
-    btn.onclick=()=>{ moodsData[date]=moodsData[date]||[]; moodsData[date].push(e); localStorage.setItem('moods',JSON.stringify(moodsData)); showMood(date); };
-    section.appendChild(btn);
-  });
-  showMood(date);
-}
+  function showProfile(){ 
+    document.getElementById('profile').classList.remove('hidden');
+    ['공지','시간표','캘린더','셔틀버스','대나무숲'].forEach(p=>document.getElementById(p).classList.add('hidden'));
+  }
 
-function showMood(date){
-  const section=document.getElementById('mood-section');
-  const div=document.createElement('div'); div.className='mood-display';
-  div.textContent=`총 ${moodsData[date]?.length||0}명 참여`;
-  section.appendChild(div);
-  const moreBtn=document.createElement('button'); moreBtn.textContent="더보기"; moreBtn.onclick=()=>alert(moodsData[date].join("\n"));
-  section.appendChild(moreBtn);
-}
+  function saveProfile(){
+    currentUser.name=document.getElementById('profile-name').value;
+    currentUser.career=document.getElementById('profile-career').value;
+    localStorage.setItem('users', JSON.stringify(users));
+    alert("저장되었습니다.");
+  }
 
-// ===== 대나무숲 =====
-function showBambooDetail(){ alert("대나무숲 상세보기 페이지 열기"); }
-function showBamboo(){ alert("대나무숲 목록 보기"); }
-function showNotice(){ alert("공지 페이지 열기"); }
-function showCalendarPage(){ alert("캘린더 페이지 열기"); }
-function showTimetablePage(){ alert("시간표 페이지 열기"); }
-function showBus(){ alert("셔틀버스 페이지 열기"); }
+  // ===== 시간표 =====
+  const timetables = {
+    "1-1":[["국어","수학","영어","과학","체육"],["영어","수학","국어","미술","체육"],["역사","음악","미술","과학","영어"],["과학","체육","국어","수학","음악"],["영어","과학","체육","역사","음악"]],
+    "2-7":[["국어","수학","영어","과학","체육"],["국어","수학","영어","과학","체육"],["역사","음악","미술","정보","영어"],["과학","체육","국어","수학","영어"],["영어","과학","체육","역사","음악"]],
+    "2-8":[["수학","국어","영어","미술","체육"],["수학","국어","영어","음악","체육"],["역사","과학","국어","영어","체육"],["과학","영어","국어","체육","음악"],["영어","체육","수학","과학","역사"]],
+    "3-1":[["국어","영어","수학","과학","체육"],["국어","음악","수학","체육","영어"],["역사","과학","미술","영어","체육"],["과학","체육","국어","수학","영어"],["영어","과학","체육","역사","음악"]]
+  };
 
-// ===== 개인페이지 =====
-function showProfile(){
-  const user=JSON.parse(localStorage.getItem('currentUser'));
-  if(!user) return;
-  document.getElementById('portal-section').style.display='none';
-  document.getElementById('profile-section').style.display='block';
-  document.getElementById('profile-name').textContent=user.name||user.id;
-  document.getElementById('profile-gradeclass').textContent=`${user.grade}학년 ${user.class}반`;
-  document.getElementById('profile-id').textContent=user.id;
-}
-function backToPortal(){ document.getElementById('profile-section').style.display='none'; document.getElementById('portal-section').style.display='block'; }
-function backToPortalFromBamboo(){ document.getElementById('bamboo-detail').style.display='none'; document.getElementById('portal-section').style.display='block'; }
+  function showTimetable(user){
+    const key = `${user.grade}-${user.class}`;
+    const tableDiv = document.getElementById('timetable');
+    tableDiv.innerHTML="";
+    const table = document.createElement('table');
+    const days = ["월","화","수","목","금"];
+    const thead = document.createElement('thead');
+    const tr = document.createElement('tr');
+    tr.innerHTML="<th>교시</th>"+days.map(d=>`<th>${d}</th>`).join("");
+    thead.appendChild(tr);
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    if(!timetables[key]){ 
+      for(let i=0;i<5;i++){
+        const tr = document.createElement('tr');
+        tr.innerHTML="<td>"+(i+1)+"교시</td>"+Array(5).fill('<td>-</td>').join("");
+        tbody.appendChild(tr);
+      }
+    } else {
+      for(let i=0;i<5;i++){
+        const tr = document.createElement('tr');
+        tr.innerHTML="<td>"+(i+1)+"교시</td>"+timetables[key][i].map(c=>`<td>${c}</td>`).join("");
+        tbody.appendChild(tr);
+      }
+    }
+    table.appendChild(tbody);
+    tableDiv.appendChild(table);
+  }
+
+  // ===== 셔틀버스 =====
+  const buses=[{route:"A코스",status:"운행중",next:"08:30"},{route:"B코스",status:"지연",next:"08:45"}];
+  function renderBusInfo(){
+    const busList=document.getElementById('bus-list');
+    busList.innerHTML="";
+    buses.forEach(b=>{
+      const li=document.createElement('li');
+      li.textContent=`${b.route} - ${b.status} (다음: ${b.next})`;
+      busList.appendChild(li);
+    });
+  }
+
+  // ===== 캘린더 + 마음온도 =====
+  let currentMonth=new Date();
+  const events=[{date:"2025-09-05",title:"체육대회"},{date:"2025-09-10",title:"과학전시회"}];
+  let moodsData=JSON.parse(localStorage.getItem('moods')||"{}");
+
+  function renderCalendar(){
+    const calendar=document.getElementById('calendar');
+    calendar.innerHTML="";
+    const year=currentMonth.getFullYear();
+    const month=currentMonth.getMonth();
+    document.getElementById('calendar-month').textContent=`${year}년 ${month+1}월`;
+
+    const firstDay=new Date(year,month,1).getDay();
+    const lastDate=new Date(year,month+1,0).getDate();
+
+    for(let i=0;i<firstDay;i++){
+      const div=document.createElement('div'); div.className='day'; div.style.visibility='hidden'; calendar.appendChild(div);
+    }
+    for(let d=1;d<=lastDate;d++){
+      const div=document.createElement('div'); div.className='day';
+      const dateStr=`${year}-${(month+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
+      div.textContent=d;
+      if(events.some(e=>e.date===dateStr)){ div.classList.add('event'); div.onclick=()=>selectMood(dateStr);}
+      calendar.appendChild(div);
+    }
+  }
+  function changeMonth(dir){ currentMonth.setMonth(currentMonth.getMonth()+dir); renderCalendar();}
+  function selectMood(date){
+    const emojis=["😄","😓","😍","😢"];
+    const section=document.getElementById('mood-section');
+    section.innerHTML=`<h3>${date} 마음온도</h3>`;
+    emojis.forEach(e=>{
+      const btn=document.createElement('button'); btn.textContent=e; btn.className='mood-btn';
+      btn.onclick=()=>{
+        moodsData[date]=moodsData[date]||[]; 
+        moodsData[date].push({user:currentUser.id,emoji:e}); 
+        localStorage.setItem('moods',JSON.stringify(moodsData)); 
+        showMood(date);
+      };
+      section.appendChild(btn);
+    });
+    showMood(date);
+  }
+  function showMood(date){
+    const section=document.getElementById('mood-section');
+    const div=document.createElement('div'); div.className='mood-display';
+    const userMoods = moodsData[date].filter(m=>m.user===currentUser.id).map(m=>m.emoji);
+    div.textContent=userMoods.join(" ");
+    section.appendChild(div);
+    const moreBtn=document.createElement('button'); moreBtn.textContent="더보기"; moreBtn.id="more-btn";
+    moreBtn.onclick=()=>alert(moodsData[date].map(m=>m.emoji).join("\n"));
+    section.appendChild(moreBtn);
+  }
+
+  // ===== 대나무숲 기본 =====
+  function showBamboo(){
+    const list=JSON.parse(localStorage.getItem('bamboo')||"[]").filter(b=>b.user===currentUser.id);
+    const ul=document.getElementById('bamboo-list'); ul.innerHTML='';
+    list.forEach(item=>{ const li=document.createElement('li'); li.textContent=`${item.text}`; ul.appendChild(li); });
+  }
+
+  // ===== 대나무숲 상세 =====
+  function showBambooDetail(){
+    document.getElementById('대나무숲').classList.add('hidden');
+    document.getElementById('bamboo-detail').classList.remove('hidden');
+    document.getElementById('bamboo-write').classList.add('hidden');
+    renderBambooDetail();
+  }
+  function hideBambooDetail(){
+    document.getElementById('bamboo-detail').classList.add('hidden');
+    document.getElementById('대나무숲').classList.remove('hidden');
+  }
+  function showBambooWrite(){
+    document.getElementById('bamboo-write').classList.toggle('hidden');
+  }
+
+  function postBambooDetail(){
+    const input=document.getElementById('bamboo-write-input');
+    const text=input.value.trim(); if(!text) return;
+    const list=JSON.parse(localStorage.getItem('bamboo')||"[]");
+    list.push({user:currentUser.id,text:text,time:new Date().toLocaleString()});
+    localStorage.setItem('bamboo',JSON.stringify(list));
+    input.value=''; renderBambooDetail();
+  }
+
+  const itemsPerPage=20; let currentPage=1;
+  function renderBambooDetail(){
+    const list=JSON.parse(localStorage.getItem('bamboo')||"[]").filter(b=>b.user===currentUser.id);
+    const filteredList = list.filter(b=>{
+      const s = document.getElementById('bamboo-search').value.toLowerCase();
+      return b.text.toLowerCase().includes(s);
+    });
+    const ul=document.getElementById('bamboo-detail-list'); ul.innerHTML='';
+    const start=(currentPage-1)*itemsPerPage;
+    const end=start+itemsPerPage;
+    filteredList.slice(start,end).forEach(item=>{
+      const li=document.createElement('li');
+      li.textContent=item.text;
+      ul.appendChild(li);
+    });
+
+    const pageDiv=document.getElementById('bamboo-pagination');
+    pageDiv.innerHTML='';
+    const totalPages=Math.ceil(filteredList.length/itemsPerPage);
+    for(let i=1;i<=totalPages;i++){
+      const btn=document.createElement('button');
+      btn.textContent=i;
+      btn.onclick=(()=>{ 
+        const page=i; 
+        return ()=>{ currentPage=page; renderBambooDetail(); };
+      })();
+      pageDiv.appendChild(btn);
+    }
+  }
+
+  function searchBamboo(){ currentPage=1; renderBambooDetail(); }
 
 </script>
 </body>
