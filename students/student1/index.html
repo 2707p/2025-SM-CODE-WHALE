@@ -1,151 +1,270 @@
-import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>창원 성민여자고등학교 포털</title>
+<style>
+  body { font-family: Arial; padding: 20px; background: #f9f9f9; }
+  h1, h2 { color: #2c3e50; }
+  section { margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
+  table { border-collapse: collapse; width: 100%; text-align: center; }
+  th, td { border: 1px solid #ccc; padding: 8px; }
+  .calendar { display: flex; flex-wrap: wrap; width: 300px; margin-bottom: 10px; }
+  .day { width: 40px; height: 40px; margin: 2px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 5px; }
+  .event { background-color: #f39c12; color: white; }
+  .mood-btn { margin: 3px; cursor: pointer; font-size: 20px;}
+  .mood-display { margin-top: 5px; }
+  .bamboo { margin-top: 10px; }
+  input[type="text"], input[type="password"], input[type="number"] { padding: 5px; margin: 3px; }
+  .pagination { margin-top:10px; text-align:center; }
+  .pagination button { margin:2px; }
+  .btn { cursor:pointer; padding:5px 10px; margin:3px; border-radius:5px; border:none; background:#3498db; color:white; }
+  .btn:hover { background:#2980b9; }
+</style>
+</head>
+<body>
 
-export default function StudentPortal() {
-  return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">🎓 학생 포털</h1>
+<h1>창원 성민여자고등학교 포털</h1>
 
-      <Tabs defaultValue="shuttle" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="shuttle">🚌 셔틀버스</TabsTrigger>
-          <TabsTrigger value="schedule">📅 시간표 및 학사일정</TabsTrigger>
-          <TabsTrigger value="events">🎉 학교 행사</TabsTrigger>
-        </TabsList>
+<!-- 로그인 -->
+<section id="login-section">
+  <h2>로그인</h2>
+  <input id="login-id" placeholder="아이디">
+  <input id="login-pw" type="password" placeholder="비밀번호">
+  <button class="btn" onclick="login()">로그인</button>
+</section>
 
-        {/* 셔틀버스 정보 탭 */}
-        <TabsContent value="shuttle">
-          <Card>
-            <CardContent className="p-4">
-              <h2 className="text-xl font-semibold mb-2">셔틀버스 시간표</h2>
-              <ul className="list-disc list-inside space-y-1">
-                <li>08:00 - 정문 출발</li>
-                <li>09:30 - 후문 출발</li>
-                <li>12:00 - 기숙사 출발</li>
-                <li>17:00 - 캠퍼스 순환</li>
-              </ul>
-            </CardContent>
-          </Card>
-        </TabsContent>
+<!-- 포털 -->
+<section id="portal-section" style="display:none">
+  <button class="btn" onclick="logout()">로그아웃</button>
 
-        {/* 수업 시간표 및 학사일정 탭 */}
-        <TabsContent value="schedule">
-          <Card>
-            <CardContent className="p-4 space-y-6">
-              {/* 수업 시간표 (표 형태) */}
-              <div>
-                <h2 className="text-xl font-semibold mb-4">수업 시간표</h2>
-                <table className="w-full table-auto border border-gray-300 text-sm">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="border px-4 py-2">요일</th>
-                      <th className="border px-4 py-2">과목</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="border px-4 py-2">월요일</td>
-                      <td className="border px-4 py-2">컴퓨터공학 / 수학</td>
-                    </tr>
-                    <tr>
-                      <td className="border px-4 py-2">화요일</td>
-                      <td className="border px-4 py-2">영어 / 프로그래밍</td>
-                    </tr>
-                    <tr>
-                      <td className="border px-4 py-2">수요일</td>
-                      <td className="border px-4 py-2">데이터베이스 / 자율학습</td>
-                    </tr>
-                    <tr>
-                      <td className="border px-4 py-2">목요일</td>
-                      <td className="border px-4 py-2">소프트웨어 공학 / 체육</td>
-                    </tr>
-                    <tr>
-                      <td className="border px-4 py-2">금요일</td>
-                      <td className="border px-4 py-2">프로젝트 실습</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+  <!-- 시간표 -->
+  <section>
+    <h2>시간표</h2>
+    <div id="timetable"></div>
+  </section>
 
-              {/* 학사일정 (달력 디자인) */}
-              <div>
-                <h2 className="text-xl font-semibold mb-4">학사일정</h2>
-                <div className="grid grid-cols-7 gap-2 text-center text-xs">
-                  <div className="font-bold">일</div>
-                  <div className="font-bold">월</div>
-                  <div className="font-bold">화</div>
-                  <div className="font-bold">수</div>
-                  <div className="font-bold">목</div>
-                  <div className="font-bold">금</div>
-                  <div className="font-bold">토</div>
-
-                  {Array.from({ length: 30 }, (_, i) => {
-                    const day = i + 1;
-                    const isHoliday =
-                      day === 5 || // 어린이날
-                      day === 6 || // 현충일
-                      (day >= 15 && day <= 19) || // 중간고사
-                      (day >= 10 && day <= 14); // 기말고사
-                    return (
-                      <div
-                        key={day}
-                        className={`p-2 rounded border text-center ${
-                          (day >= 15 && day <= 19) ? "bg-yellow-200" :
-                          (day >= 10 && day <= 14) ? "bg-red-200" :
-                          (day === 5 || day === 6) ? "bg-blue-200" : ""
-                        }`}
-                      >
-                        {day}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="mt-2 text-xs space-y-1">
-                  <div><span className="inline-block w-3 h-3 bg-yellow-200 mr-2"></span>중간고사</div>
-                  <div><span className="inline-block w-3 h-3 bg-red-200 mr-2"></span>기말고사</div>
-                  <div><span className="inline-block w-3 h-3 bg-blue-200 mr-2"></span>공휴일</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* 학교 행사 및 참가 신청 탭 */}
-        <TabsContent value="events">
-          <Card>
-            <CardContent className="p-4 space-y-4">
-              <div>
-                <h2 className="text-xl font-semibold mb-2">다가오는 행사</h2>
-                <ul className="list-disc list-inside">
-                  <li>5월 10일 - 봄 축제</li>
-                  <li>6월 1일 - 동아리 전시회</li>
-                  <li>6월 20일 - 종강파티</li>
-                </ul>
-              </div>
-
-              <div>
-                <h2 className="text-xl font-semibold mb-2">참가 신청</h2>
-                <form className="space-y-2">
-                  <input
-                    type="text"
-                    placeholder="이름"
-                    className="border rounded p-2 w-full"
-                  />
-                  <select className="border rounded p-2 w-full">
-                    <option>참가할 행사 선택</option>
-                    <option>봄 축제</option>
-                    <option>동아리 전시회</option>
-                    <option>종강파티</option>
-                  </select>
-                  <Button type="submit">신청하기</Button>
-                </form>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+  <!-- 캘린더 -->
+  <section>
+    <h2>캘린더</h2>
+    <div>
+      <button class="btn" onclick="changeMonth(-1)">◀ 이전</button>
+      <span id="calendar-month"></span>
+      <button class="btn" onclick="changeMonth(1)">다음 ▶</button>
     </div>
-  );
-}
+    <div class="calendar" id="calendar"></div>
+    <div id="mood-section"></div>
+  </section>
+
+  <!-- 셔틀버스 -->
+  <section>
+    <h2>셔틀버스 정보</h2>
+    <ul id="bus-list"></ul>
+  </section>
+
+  <!-- 대나무숲 -->
+  <section>
+    <h2>대나무숲 게시판</h2>
+    <button class="btn" onclick="showBambooPage()">자세히 보기</button>
+  </section>
+</section>
+
+<!-- 대나무숲 상세 페이지 -->
+<section id="bamboo-page" style="display:none">
+  <h2>대나무숲 상세보기</h2>
+  <div>
+    <button class="btn" onclick="showWriteForm()">글쓰기</button>
+    <input type="text" id="bamboo-search" placeholder="제목/내용 검색">
+    <button class="btn" onclick="renderBambooDetail()">검색</button>
+  </div>
+  <div id="write-form" style="display:none;">
+    <input type="text" id="bamboo-title" placeholder="제목">
+    <textarea id="bamboo-content" placeholder="내용" rows="3" style="width:100%;"></textarea>
+    <button class="btn" onclick="postBambooDetail()">게시</button>
+    <button class="btn" onclick="hideWriteForm()">취소</button>
+  </div>
+  <table id="bamboo-list-table" style="width:100%; margin-top:10px;">
+    <thead><tr><th>익명</th><th>제목</th><th>작성일</th><th>조회수</th></tr></thead>
+    <tbody id="bamboo-detail-list"></tbody>
+  </table>
+  <div class="pagination" id="bamboo-pagination"></div>
+  <button class="btn" onclick="closeBambooPage()">닫기</button>
+</section>
+
+<script>
+  // ===== 초기 유저 =====
+  let users=[{id:"student1", password:"1234", grade:2, class:7}];
+  localStorage.setItem('users', JSON.stringify(users));
+
+  function login(){
+    const id=document.getElementById('login-id').value;
+    const pw=document.getElementById('login-pw').value;
+    users=JSON.parse(localStorage.getItem('users')||"[]");
+    const user=users.find(u=>u.id===id && u.password===pw);
+    if(user){
+      alert(`로그인 성공! ${user.grade}학년 ${user.class}반`);
+      localStorage.setItem('currentUser', JSON.stringify(user));
+      document.getElementById('login-section').style.display='none';
+      document.getElementById('portal-section').style.display='block';
+      showTimetable(user);
+      renderCalendar();
+      renderBusInfo();
+    } else alert('아이디 또는 비밀번호가 틀렸습니다.');
+  }
+
+  function logout(){
+    localStorage.removeItem('currentUser');
+    location.reload();
+  }
+
+  // ===== 시간표 =====
+  const timetables={
+    "2-7":[["국어","수학","영어","과학","체육"],["국어","수학","영어","과학","체육"],["역사","음악","미술","정보","영어"],["과학","체육","국어","수학","영어"],["영어","과학","체육","역사","음악"]],
+    "2-8":[["수학","국어","영어","미술","체육"],["수학","국어","영어","음악","체육"],["역사","과학","국어","영어","체육"],["과학","영어","국어","체육","음악"],["영어","체육","수학","과학","역사"]]
+  };
+  function showTimetable(user){
+    const key=`${user.grade}-${user.class}`;
+    const tableDiv=document.getElementById('timetable');
+    tableDiv.innerHTML="";
+    const table=document.createElement('table');
+    const days=["월","화","수","목","금"];
+    const thead=document.createElement('thead');
+    const tr=document.createElement('tr');
+    tr.innerHTML="<th>교시</th>"+days.map(d=>`<th>${d}</th>`).join("");
+    thead.appendChild(tr);
+    table.appendChild(thead);
+    const tbody=document.createElement('tbody');
+    for(let i=0;i<5;i++){
+      const tr=document.createElement('tr');
+      tr.innerHTML="<td>"+(i+1)+"교시</td>"+(timetables[key][i]||["","","","",""]).map(c=>`<td>${c}</td>`).join("");
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    tableDiv.appendChild(table);
+  }
+
+  // ===== 셔틀버스 =====
+  const buses=[{route:"A코스",status:"운행중",next:"08:30"},{route:"B코스",status:"지연",next:"08:45"}];
+  function renderBusInfo(){
+    const busList=document.getElementById('bus-list');
+    busList.innerHTML="";
+    buses.forEach(b=>{
+      const li=document.createElement('li');
+      li.textContent=`${b.route} - ${b.status} (다음: ${b.next})`;
+      busList.appendChild(li);
+    });
+  }
+
+  // ===== 캘린더 + 마음온도 =====
+  let currentMonth=new Date();
+  const events=[{date:"2025-09-05",title:"체육대회"},{date:"2025-09-10",title:"과학전시회"}];
+  let moodsData=JSON.parse(localStorage.getItem('moods')||"{}");
+
+  function renderCalendar(){
+    const calendar=document.getElementById('calendar');
+    calendar.innerHTML="";
+    const year=currentMonth.getFullYear();
+    const month=currentMonth.getMonth();
+    document.getElementById('calendar-month').textContent=`${year}년 ${month+1}월`;
+
+    const firstDay=new Date(year,month,1).getDay();
+    const lastDate=new Date(year,month+1,0).getDate();
+
+    for(let i=0;i<firstDay;i++){
+      const div=document.createElement('div'); div.className='day'; div.style.visibility='hidden'; calendar.appendChild(div);
+    }
+    for(let d=1;d<=lastDate;d++){
+      const div=document.createElement('div'); div.className='day';
+      const dateStr=`${year}-${(month+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
+      div.textContent=d;
+      if(events.some(e=>e.date===dateStr)){ div.classList.add('event'); div.onclick=()=>selectMood(dateStr);}
+      calendar.appendChild(div);
+    }
+  }
+  function changeMonth(dir){ currentMonth.setMonth(currentMonth.getMonth()+dir); renderCalendar();}
+  function selectMood(date){
+    const emojis=["😄","😓","😍","😢"];
+    const section=document.getElementById('mood-section');
+    section.innerHTML=`<h3>${date} 마음온도</h3>`;
+    emojis.forEach(e=>{
+      const btn=document.createElement('button'); btn.textContent=e; btn.className='mood-btn';
+      btn.onclick=()=>{ moodsData[date]=moodsData[date]||[]; moodsData[date].push(e); localStorage.setItem('moods',JSON.stringify(moodsData)); showMood(date);};
+      section.appendChild(btn);
+    });
+    showMood(date);
+  }
+  function showMood(date){
+    const section=document.getElementById('mood-section');
+    const div=document.createElement('div'); div.className='mood-display';
+    div.textContent=`더보기: ${ (moodsData[date]||[]).length }개`;
+    section.appendChild(div);
+    const moreBtn=document.createElement('button'); moreBtn.textContent="더보기"; moreBtn.onclick=()=>alert(moodsData[date].join("\n"));
+    section.appendChild(moreBtn);
+  }
+
+  // ===== 대나무숲 기본 페이지 =====
+  function showBambooPage(){
+    document.getElementById('portal-section').style.display='none';
+    document.getElementById('bamboo-page').style.display='block';
+    renderBambooDetail();
+  }
+  function closeBambooPage(){
+    document.getElementById('bamboo-page').style.display='none';
+    document.getElementById('portal-section').style.display='block';
+  }
+
+  // ===== 대나무숲 상세 =====
+  let bambooPosts=JSON.parse(localStorage.getItem('bambooPosts')||"[]");
+  let currentBambooPage=1; const bambooPerPage=20;
+
+  function showWriteForm(){ document.getElementById('write-form').style.display='block'; }
+  function hideWriteForm(){ document.getElementById('write-form').style.display='none'; }
+
+  function postBambooDetail(){
+    const title=document.getElementById('bamboo-title').value.trim();
+    const content=document.getElementById('bamboo-content').value.trim();
+    if(!title || !content){ alert("제목과 내용을 입력해주세요."); return;}
+    bambooPosts.unshift({title, content, date:new Date().toLocaleString(), views:0, comments:[], rec:0, deRec:0});
+    localStorage.setItem('bambooPosts', JSON.stringify(bambooPosts));
+    document.getElementById('bamboo-title').value=''; document.getElementById('bamboo-content').value='';
+    hideWriteForm(); renderBambooDetail();
+  }
+
+  function renderBambooDetail(){
+    const tbody=document.getElementById('bamboo-detail-list');
+    tbody.innerHTML="";
+    const search=document.getElementById('bamboo-search').value.trim().toLowerCase();
+    let filtered=bambooPosts;
+    if(search) filtered=bambooPosts.filter(p=>p.title.toLowerCase().includes(search)||p.content.toLowerCase().includes(search));
+
+    const totalPage=Math.ceil(filtered.length/bambooPerPage);
+    if(currentBambooPage>totalPage) currentBambooPage=1;
+    const start=(currentBambooPage-1)*bambooPerPage;
+    const pagePosts=filtered.slice(start,start+bambooPerPage);
+
+    pagePosts.forEach((p,i)=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>익명</td><td><a href="#" onclick="viewBambooPost(${start+i})">${p.title}</a></td><td>${p.date}</td><td>${p.views}</td>`;
+      tbody.appendChild(tr);
+    });
+
+    const pagDiv=document.getElementById('bamboo-pagination');
+    pagDiv.innerHTML="";
+    for(let i=1;i<=totalPage;i++){
+      const btn=document.createElement('button'); btn.textContent=i; btn.className='btn';
+      btn.onclick=(()=>{ return ()=>{ currentBambooPage=i; renderBambooDetail(); }})(i);
+      pagDiv.appendChild(btn);
+    }
+  }
+
+  function viewBambooPost(idx){
+    const post=bambooPosts[idx];
+    post.views+=1;
+    localStorage.setItem('bambooPosts', JSON.stringify(bambooPosts));
+    alert(`제목: ${post.title}\n내용: ${post.content}\n추천:${post.rec} 비추천:${post.deRec}\n댓글:${post.comments.length}개`);
+    renderBambooDetail();
+  }
+
+</script>
+</body>
+</html>
